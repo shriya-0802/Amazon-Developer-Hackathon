@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeSync — AI-Powered Proactive Personal Operations Center | Built on AWS</title>
+    <meta name="description" content="LifeSync: An Alexa+ powered proactive personal operations center built with AWS Bedrock, MCP, and multi-agent orchestration.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amazon+Ember:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Top Navigation Bar (Amazon-style) -->
+        <header class="top-navbar" id="top-navbar">
+            <div class="navbar-left">
+                <button class="hamburger-btn" id="sidebar-toggle" title="Toggle Sidebar">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="brand">
+                    <div class="brand-logo">
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                            <rect width="28" height="28" rx="6" fill="#FF9900"/>
+                            <path d="M8 14L12 18L20 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h1 class="brand-name">LifeSync</h1>
+                    <span class="brand-badge">ALEXA+ POWERED</span>
+                </div>
+            </div>
+            <div class="navbar-center">
+                <div class="status-pill" id="status-pill">
+                    <span class="status-dot"></span>
+                    <span>MCP Server Connected</span>
+                </div>
+            </div>
+            <div class="navbar-right">
+                <button class="nav-icon-btn" id="btn-notifications" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge">3</span>
+                </button>
+                <button class="nav-icon-btn" id="btn-dark-mode" title="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button class="nav-icon-btn" id="btn-settings" title="Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <div class="user-avatar-nav" id="user-menu-toggle">
+                    <img src="https://ui-avatars.com/api/?name=SM&background=FF9900&color=fff&bold=true&size=36" alt="User Avatar">
+                </div>
+            </div>
+        </header>
+
+        <div class="app-body">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <nav class="sidebar-nav">
+                    <div class="nav-section-label">MAIN</div>
+                    <a href="#" class="sidebar-item active" data-tab="assistant" id="nav-assistant">
+                        <i class="fa-solid fa-message"></i>
+                        <span>Assistant</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="schedule" id="nav-schedule">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span>Schedule</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="tasks" id="nav-tasks">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Tasks</span>
+                        <span class="sidebar-badge">2</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="fitness" id="nav-fitness">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                        <span>Fitness</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="shopping" id="nav-shopping">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        <span>Shopping</span>
+                    </a>
+
+                    <div class="nav-section-label" style="margin-top: 24px;">INSIGHTS</div>
+                    <a href="#" class="sidebar-item" data-tab="memory" id="nav-memory">
+                        <i class="fa-solid fa-brain"></i>
+                        <span>Memory Graph</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="analytics" id="nav-analytics">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="aws-badge">
+                        <i class="fa-brands fa-aws"></i>
+                        <div>
+                            <span class="aws-label">Powered by</span>
+                            <span class="aws-service">AWS Bedrock</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="main-content" id="main-content">
+                <!-- Chat Area -->
+                <div class="chat-wrapper" id="chat-wrapper">
+                    <div class="chat-messages" id="chat-container">
+                        <!-- Welcome State -->
+                        <div class="welcome-state" id="welcome-state">
+                            <div class="welcome-hero">
+                                <div class="welcome-icon">
+                                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                                        <rect width="56" height="56" rx="14" fill="url(#grad1)"/>
+                                        <path d="M16 28L24 36L40 20" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <defs><linearGradient id="grad1" x1="0" y1="0" x2="56" y2="56"><stop stop-color="#FF9900"/><stop offset="1" stop-color="#FF6600"/></linearGradient></defs>
+                                    </svg>
+                                </div>
+                                <h2>Welcome to LifeSync</h2>
+                                <p>Your AI-powered proactive personal operations center.<br>Built with AWS Bedrock, MCP Protocol, and multi-agent orchestration.</p>
+                            </div>
+                            <div class="quick-actions-grid">
+                                <button class="quick-action-card" data-query="good morning" id="qa-briefing">
+                                    <div class="qa-icon" style="background: linear-gradient(135deg, #FF9900, #FF6600);">
+                                        <i class="fa-solid fa-sun"></i>
+                                    </div>
+                                    <div class="qa-text">
+                                        <strong>Morning Briefing</strong>
+                                        <span>Get your daily overview</span>
+                                    </div>
+                                </button>
+                                <button class="quick-action-card" data-query="what is my schedule today?" id="qa-schedule">
+                                    <div class="qa-icon" style="background: linear-gradient(135deg, #146EB4, #0B3D91);">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="qa-text">
+                                        <strong>Today's Schedule</strong>
+                                        <span>View meetings & free blocks</span>
+                                    </div>
+                                </button>
+                                <button class="quick-action-card" data-query="show my pending tasks" id="qa-tasks">
+                                    <div class="qa-icon" style="background: linear-gradient(135deg, #067D68, #006B5A);">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </div>
+                                    <div class="qa-text">
+                                        <strong>Pending Tasks</strong>
+                                        <span>Track your to-dos</span>
+                                    </div>
+                                </button>
+                                <button class="quick-action-card" data-query="What is my fitness status?" id="qa-fitness">
+                                    <div class="qa-icon" style="background: linear-gradient(135deg, #C7511F, #A82A00);">
+                                        <i class="fa-solid fa-heart-pulse"></i>
+                                    </div>
+                                    <div class="qa-text">
+                                        <strong>Fitness Tracker</strong>
+                                        <span>Steps, goals & progress</span>
+                                    </div>
+                                </button>
+                                <button class="quick-action-card" data-query="Do I need to reorder anything?" id="qa-shopping">
+                                    <div class="qa-icon" style="background: linear-gradient(135deg, #5B2D8E, #3A1A5E);">
+                                        <i class="fa-solid fa-cart-shopping"></i>
+                                    </div>
+                                    <div class="qa-text">
+                                        <strong>Smart Shopping</strong>
+                                        <span>Reorder suggestions</span>
+                                    </div>
+                                </button>
+                                <button class="quick-action-card" data-query="What's the weather like?" id="qa-weather">
+                                    <div class="qa-icon" style="background: linear-gradient(135deg, #1A8FC4, #0D6A94);">
+                                        <i class="fa-solid fa-cloud-sun"></i>
+                                    </div>
+                                    <div class="qa-text">
+                                        <strong>Weather & Context</strong>
+                                        <span>Traffic, weather & news</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Bar -->
+                    <div class="input-bar" id="input-bar">
+                        <form id="chat-form" class="input-form">
+                            <button type="button" class="input-icon-btn voice-btn" id="btn-voice" title="Voice Input">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <input type="text" id="message-input" placeholder="Ask LifeSync anything..." autocomplete="off" aria-label="Chat input">
+                            <button type="button" class="input-icon-btn" id="btn-attach" title="Attach File">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+                            <button type="submit" class="send-btn" id="btn-send" title="Send Message">
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                        </form>
+                        <div class="input-footer">
+                            <span>LifeSync uses <strong>AWS Bedrock</strong> + <strong>Gemini</strong> for AI. Responses may not be perfect.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Context Panel -->
+                <aside class="context-panel" id="context-panel">
+                    <div class="context-header">
+                        <h3>Live Context</h3>
+                        <button class="context-toggle-btn" id="btn-toggle-context" title="Collapse Panel">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="context-body" id="context-widgets">
+                        <div class="ctx-widget skeleton-widget"></div>
+                        <div class="ctx-widget skeleton-widget"></div>
+                        <div class="ctx-widget skeleton-widget"></div>
+                    </div>
+                </aside>
+            </main>
+        </div>
+    </div>
+
+    <!-- Notification Panel (Hidden by default) -->
+    <div class="notification-panel hidden" id="notification-panel">
+        <div class="notif-header">
+            <h4>Notifications</h4>
+            <button class="notif-close" id="notif-close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="notif-list">
+            <div class="notif-item unread">
+                <div class="notif-icon" style="background:#FF9900;"><i class="fa-solid fa-bell"></i></div>
+                <div class="notif-body">
+                    <strong>Proactive Alert</strong>
+                    <p>Your meeting "Team Standup" starts in 30 minutes.</p>
+                    <span class="notif-time">2 min ago</span>
+                </div>
+            </div>
+            <div class="notif-item unread">
+                <div class="notif-icon" style="background:#067D68;"><i class="fa-solid fa-shoe-prints"></i></div>
+                <div class="notif-body">
+                    <strong>Fitness Goal</strong>
+                    <p>You're at 89% of your daily step goal. 1,099 steps to go!</p>
+                    <span class="notif-time">15 min ago</span>
+                </div>
+            </div>
+            <div class="notif-item">
+                <div class="notif-icon" style="background:#5B2D8E;"><i class="fa-solid fa-cart-shopping"></i></div>
+                <div class="notif-body">
+                    <strong>Smart Reorder</strong>
+                    <p>Based on patterns, you may need to reorder Tide Pods.</p>
+                    <span class="notif-time">1 hr ago</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal (Hidden by default) -->
+    <div class="modal-overlay hidden" id="settings-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" id="settings-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-row">
+                    <div><strong>AI Engine</strong><p class="setting-desc">Choose the primary AI model</p></div>
+                    <select class="setting-select" id="ai-engine-select">
+                        <option value="bedrock" selected>AWS Bedrock (Claude)</option>
+                        <option value="gemini">Google Gemini</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <div><strong>Proactive Alerts</strong><p class="setting-desc">Enable smart notifications</p></div>
+                    <label class="toggle-switch"><input type="checkbox" checked id="toggle-proactive"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <div><strong>MCP Transport</strong><p class="setting-desc">Streamable HTTP (Spec 2025-11-25)</p></div>
+                    <span class="setting-value">Active</span>
+                </div>
+                <div class="setting-row">
+                    <div><strong>Knowledge Graph</strong><p class="setting-desc">Persistent cross-session memory</p></div>
+                    <span class="setting-value">Syncing</span>
+                </div>
+                <div class="setting-row">
+                    <div><strong>Session ID</strong><p class="setting-desc" id="session-display">—</p></div>
+                    <button class="setting-btn" id="btn-new-session">New Session</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Template -->
+    <template id="message-template">
+        <div class="message fade-in">
+            <div class="message-avatar"></div>
+            <div class="message-content">
+                <div class="message-bubble"></div>
+                <div class="message-cards"></div>
+                <div class="message-timestamp"></div>
+            </div>
+        </div>
+    </template>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+</html>

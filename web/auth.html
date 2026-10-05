@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeSync — Sign In or Create Account</title>
+    <meta name="description" content="Sign in to LifeSync, your AI-powered proactive personal operations center built on AWS.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --amazon-navy: #232F3E;
+            --amazon-navy-deep: #131A22;
+            --amazon-orange: #FF9900;
+            --amazon-orange-hover: #E88B00;
+            --amazon-orange-light: #FEBD69;
+            --amazon-green: #067D68;
+            --amazon-red: #C7511F;
+            --bg-primary: #0F1111;
+            --bg-card: #1F2937;
+            --text-primary: #E8EAED;
+            --text-secondary: #9AA0A6;
+            --text-muted: #6B7280;
+            --border-subtle: rgba(255,255,255,0.08);
+            --border-medium: rgba(255,255,255,0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top bar */
+        .auth-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: var(--amazon-navy-deep);
+            border-bottom: 2px solid var(--amazon-orange);
+        }
+        .auth-topbar .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .auth-topbar h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .auth-topbar .badge {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--amazon-orange);
+            background: rgba(255,153,0,0.12);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,153,0,0.25);
+        }
+
+        /* Main content */
+        .auth-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(255,153,0,0.06), transparent 40%),
+                radial-gradient(circle at 80% 30%, rgba(20,110,180,0.06), transparent 40%);
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        /* Tabs */
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-subtle);
+            border-bottom: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .auth-tab:first-child { border-radius: 12px 0 0 0; }
+        .auth-tab:last-child { border-radius: 0 12px 0 0; }
+        .auth-tab.active {
+            color: var(--amazon-orange);
+            background: var(--bg-card);
+            border-color: var(--border-medium);
+            border-bottom-color: var(--bg-card);
+        }
+        .auth-tab:hover:not(.active) { color: var(--text-secondary); }
+
+        /* Card */
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-medium);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            padding: 32px;
+        }
+
+        .auth-card h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .auth-card .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 11px 14px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input::placeholder { color: var(--text-muted); }
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--amazon-orange);
+            box-shadow: 0 0 0 2px rgba(255,153,0,0.15);
+        }
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239AA0A6' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+        .form-group select option { background: var(--bg-card); }
+
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input { padding-right: 44px; }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .password-toggle:hover { color: var(--text-primary); }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--amazon-orange);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 6px;
+        }
+        .submit-btn:hover {
+            background: var(--amazon-orange-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,153,0,0.3);
+        }
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        .feature-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .feature-list li {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .feature-list li i {
+            color: var(--amazon-orange);
+            font-size: 10px;
+        }
+
+        .error-msg {
+            background: rgba(199,81,31,0.15);
+            border: 1px solid rgba(199,81,31,0.3);
+            color: #FF6B35;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .error-msg.visible { display: block; }
+
+        .success-msg {
+            background: rgba(6,125,104,0.15);
+            border: 1px solid rgba(6,125,104,0.3);
+            color: #0BD9A4;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .success-msg.visible { display: block; }
+
+        /* Footer */
+        .auth-footer {
+            text-align: center;
+            padding: 16px;
+            font-size: 11px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-subtle);
+        }
+        .auth-footer a { color: var(--amazon-orange); text-decoration: none; }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Form hidden */
+        .form-panel { display: none; }
+        .form-panel.active { display: block; }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 24px 18px; }
+            .feature-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="auth-topbar">
+        <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
+                <rect width="28" height="28" rx="6" fill="#FF9900"/>
+                <path d="M8 14L12 18L20 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h1>LifeSync</h1>
+            <span class="badge">ALEXA+ POWERED</span>
+        </div>
+    </header>
+
+    <main class="auth-main">
+        <div class="auth-container">
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+                <div class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</div>
+            </div>
+
+            <div class="auth-card">
+                <!-- Login Form -->
+                <div class="form-panel active" id="panel-login">
+                    <h2>Welcome Back</h2>
+                    <p class="subtitle">Sign in to your LifeSync dashboard</p>
+
+                    <div class="error-msg" id="login-error"></div>
+
+                    <form id="login-form" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label for="login-email">Email Address</label>
+                            <input type="email" id="login-email" placeholder="you@example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="login-password" placeholder="Enter your password" required minlength="6">
+                                <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-btn" id="login-btn">
+                            Sign In
+                        </button>
+                    </form>
+
+                    <div class="divider">Or continue with</div>
+
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> AI Assistant</li>
+                        <li><i class="fa-solid fa-check"></i> Smart Shopping</li>
+                        <li><i class="fa-solid fa-check"></i> Task Manager</li>
+                        <li><i class="fa-solid fa-check"></i> Fitness Tracker</li>
+                        <li><i class="fa-solid fa-check"></i> Memory Graph</li>
+                        <li><i class="fa-solid fa-check"></i> Proactive Alerts</li>
+                    </ul>
+                </div>
+
+                <!-- Signup Form -->
+                <div class="form-panel" id="panel-signup">
+                    <h2>Create Your Account</h2>
+                    <p class="subtitle">Join LifeSync and let AI manage your day</p>
+
+                    <div class="error-msg" id="signup-error"></div>
+                    <div class="success-msg" id="signup-success"></div>
+
+                    <form id="signup-form" onsubmit="handleSignup(event)">
+                        <div class="form-group">
+                            <label for="signup-name">Full Name</label>
+                            <input type="text" id="signup-name" placeholder="Shriya Mohanty" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-email">Email Address</label>
+                            <input type="email" id="signup-email" placeholder="you@example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-password">Password</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="signup-password" placeholder="At least 6 characters" required minlength="6">
+                                <button type="button" class="password-toggle" onclick="togglePassword('signup-password', this)">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-role">Account Type</label>
+                            <select id="signup-role">
+                                <option value="user">User — Personal Dashboard</option>
+                                <option value="admin">Administrator — Full Access</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="submit-btn" id="signup-btn">
+                            Create Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="auth-footer">
+        Built with <i class="fa-brands fa-aws" style="color: var(--amazon-orange);"></i> AWS Bedrock &amp; MCP Protocol •
+        <a href="https://amazonappdev2026.devpost.com/" target="_blank">Amazon App Dev Hackathon 2026</a>
+    </footer>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        // Check if already logged in
+        (function() {
+            const token = localStorage.getItem('lifesync_token');
+            if (token) {
+                window.location.href = '/';
+            }
+        })();
+
+        function switchTab(tab) {
+            document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+            document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+            document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+            document.getElementById('panel-signup').classList.toggle('active', tab === 'signup');
+            // Clear errors
+            document.querySelectorAll('.error-msg, .success-msg').forEach(el => el.classList.remove('visible'));
+        }
+
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const errorEl = document.getElementById('login-error');
+            errorEl.classList.remove('visible');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Signing in...';
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value,
+                        password: document.getElementById('login-password').value,
+                    }),
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Login failed');
+                }
+
+                const data = await res.json();
+                localStorage.setItem('lifesync_token', data.token);
+                localStorage.setItem('lifesync_user', JSON.stringify(data));
+                window.location.href = '/';
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.add('visible');
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            const btn = document.getElementById('signup-btn');
+            const errorEl = document.getElementById('signup-error');
+            const successEl = document.getElementById('signup-success');
+            errorEl.classList.remove('visible');
+            successEl.classList.remove('visible');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Creating account...';
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('signup-name').value,
+                        email: document.getElementById('signup-email').value,
+                        password: document.getElementById('signup-password').value,
+                        role: document.getElementById('signup-role').value,
+                    }),
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Signup failed');
+                }
+
+                const data = await res.json();
+                localStorage.setItem('lifesync_token', data.token);
+                localStorage.setItem('lifesync_user', JSON.stringify(data));
+
+                successEl.textContent = `✅ Account created! Welcome, ${data.name}. Redirecting...`;
+                successEl.classList.add('visible');
+
+                setTimeout(() => { window.location.href = '/'; }, 1500);
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.add('visible');
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        }
+    </script>
+</body>
+</html>
