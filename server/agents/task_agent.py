@@ -1,6 +1,6 @@
 """Task Agent — Intelligent task management with real database integration."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from memory.knowledge_graph import KnowledgeGraph
 import database as db
 
@@ -20,7 +20,7 @@ class TaskAgent:
                 task_text = entities.get("task", "New task")
 
             priority = entities.get("priority", "medium")
-            today = datetime.utcnow().strftime("%Y-%m-%d")
+            today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
 
             result = db.add_task(session_id, {
                 "title": task_text,
@@ -72,35 +72,54 @@ class TaskAgent:
 
         if not pending:
             return {
-                "text": "✅ You have no pending tasks! All caught up! 🎉",
+                "text": "Here is the status of your task list:",
                 "type": "task_list",
-                "cards": [],
+                "cards": [{
+                    "type": "info_card",
+                    "title": "✅ All Caught Up",
+                    "body": "You have no pending tasks. Enjoy your day! 🎉",
+                }],
             }
 
-        text = f"✅ You have {len(pending)} pending tasks:\n\n"
+        text = f"Here are your {len(pending)} pending tasks:"
+        body_text = ""
         for t in pending:
             icon = "🔴" if t["priority"] == "high" else "🟡" if t["priority"] == "medium" else "🟢"
             text += f"{icon} **{t['title']}** — Due: {t.get('due_date', 'TBD')}\n"
+            body_text += f"{icon} {t['title']} (Due: {t.get('due_date', 'TBD')})\n"
 
         return {
             "text": text,
             "type": "task_list",
             "cards": [{
-                "type": "task_list_card",
+                "type": "info_card",
                 "title": "✅ Your Tasks",
-                "tasks": pending,
+                "body": body_text.strip(),
             }],
         }
 
     async def _prioritize(self, session_id: str) -> dict:
         pending = db.get_tasks(session_id, status="pending")
+        if not pending:
+            return await self._list_tasks(session_id)
+            
         pending.sort(key=lambda x: {"high": 0, "medium": 1, "low": 2}.get(x.get("priority", "medium"), 1))
 
         text = "📋 Here's your prioritized task list:\n\n"
+        body_text = ""
         for i, t in enumerate(pending, 1):
             text += f"{i}. **{t['title']}** ({t['priority']} priority, due {t.get('due_date', 'TBD')})\n"
+            body_text += f"{i}. {t['title']} ({t['priority']} priority)\n"
 
         if pending:
             text += f"\n💡 I suggest tackling \"{pending[0]['title']}\" first — it's your highest priority item."
 
-        return {"text": text, "type": "prioritized", "cards": []}
+        return {
+            "text": text,
+            "type": "prioritized",
+            "cards": [{
+                "type": "info_card",
+                "title": "📋 Prioritized Tasks",
+                "body": body_text.strip(),
+            }],
+        }

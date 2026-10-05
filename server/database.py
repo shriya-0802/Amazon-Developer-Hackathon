@@ -22,7 +22,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "lifesync.db")
 
 def get_db():
     """Get a database connection with row factory."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -142,7 +142,7 @@ def init_db():
 
 # ── User Management ─────────────────────────────────────────────────
 
-def create_user(email: str, name: str, password: str, role: str = "user") -> dict:
+def create_user(email: str, name: str, password: str, role: str = "user", phone: str = "", **kwargs) -> dict:
     """Create a new user with hashed password."""
     conn = get_db()
     cursor = conn.cursor()
@@ -155,14 +155,22 @@ def create_user(email: str, name: str, password: str, role: str = "user") -> dic
 
     user_id = str(uuid.uuid4())
     password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    now = datetime.utcnow().isoformat()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
+    
+    prefs_dict = {"phone": phone} if phone else {}
+    for k in ["age", "sex", "height_cm", "weight_kg", "diet", "location"]:
+        if kwargs.get(k):
+            prefs_dict[k] = kwargs.get(k)
+            
+    preferences = json.dumps(prefs_dict)
 
     cursor.execute("""
-        INSERT INTO users (id, email, name, password_hash, role, created_at, avatar_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, email, name, password_hash, role, created_at, avatar_url, preferences)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         user_id, email.lower(), name, password_hash, role, now,
-        f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background=FF9900&color=fff&bold=true"
+        f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background=FF9900&color=fff&bold=true",
+        preferences
     ))
 
     # Log the activity
@@ -204,7 +212,7 @@ def authenticate_user(email: str, password: str) -> dict:
         return {"error": "Invalid email or password"}
 
     # Update last login
-    now = datetime.utcnow().isoformat()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
     cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (now, user["id"]))
 
     # Log activity
@@ -277,7 +285,7 @@ def add_shopping_item(user_id: str, item: dict) -> dict:
     """Add item to shopping list."""
     conn = get_db()
     item_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
 
     conn.execute("""
         INSERT INTO shopping_items (id, user_id, product_name, category, quantity, estimated_price,
@@ -331,7 +339,7 @@ def add_task(user_id: str, task: dict) -> dict:
     """Add a new task."""
     conn = get_db()
     task_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
     conn.execute("""
         INSERT INTO tasks (id, user_id, title, description, priority, category, due_date, status, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -353,7 +361,7 @@ def add_task(user_id: str, task: dict) -> dict:
 def complete_task(task_id: str) -> dict:
     """Mark a task as completed."""
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
     conn.execute("UPDATE tasks SET status = 'completed', completed_at = ? WHERE id = ?", (now, task_id))
     conn.commit()
     conn.close()
@@ -366,7 +374,7 @@ def log_fitness(user_id: str, entry: dict) -> dict:
     """Log a fitness entry."""
     conn = get_db()
     entry_id = str(uuid.uuid4())
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
     conn.execute("""
         INSERT OR REPLACE INTO fitness_entries (id, user_id, date, steps, calories_burned, active_minutes, water_glasses, sleep_hours, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -384,7 +392,7 @@ def log_fitness(user_id: str, entry: dict) -> dict:
 def get_fitness_history(user_id: str, days: int = 7) -> list:
     """Get fitness history for the last N days."""
     conn = get_db()
-    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+    cutoff = ((datetime.utcnow() + timedelta(hours=5, minutes=30)) - timedelta(days=days)).strftime("%Y-%m-%d")
     rows = conn.execute(
         "SELECT * FROM fitness_entries WHERE user_id = ? AND date >= ? ORDER BY date DESC",
         (user_id, cutoff)
@@ -413,7 +421,7 @@ def add_event(user_id: str, event: dict) -> dict:
     """Add a calendar event."""
     conn = get_db()
     event_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
     conn.execute("""
         INSERT INTO events (id, user_id, title, description, start_time, end_time, location, event_type, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -450,7 +458,7 @@ def get_activity_log(user_id: str, limit: int = 20) -> list:
 def create_access_token(data: dict) -> str:
     """Create a JWT access token."""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = (datetime.utcnow() + timedelta(hours=5, minutes=30)) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -468,58 +476,18 @@ def verify_token(token: str) -> dict:
 
 def _seed_user_data(cursor, user_id: str, now: str):
     """Seed demo data for a new user."""
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-
-    # Sample tasks
+    from uuid import uuid4
+    # Seed Demo Tasks
     tasks = [
-        ("Review PR #847", "Code review for backend changes", "high", "work", today),
-        ("Prepare sprint demo slides", "Q4 sprint demo presentation", "high", "work",
-         (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")),
-        ("Book dentist appointment", "Regular checkup", "medium", "personal",
-         (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d")),
-        ("Buy birthday gift for Mom", "Her birthday is Oct 15", "medium", "personal", "2026-10-15"),
+        ("Update fitness profile & check BMR", "high", "health"),
+        ("Buy groceries for North Indian meal prep", "medium", "personal"),
+        ("Schedule team sync for Amazon Hackathon", "high", "work")
     ]
-    for title, desc, pri, cat, due in tasks:
+    for title, priority, category in tasks:
         cursor.execute("""
-            INSERT INTO tasks (id, user_id, title, description, priority, category, due_date, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-        """, (str(uuid.uuid4()), user_id, title, desc, pri, cat, due, now))
-
-    # Sample events
-    events = [
-        ("Team Standup", "Daily sync", f"{today}T09:30:00", f"{today}T09:45:00", "Zoom", "meeting"),
-        ("Sprint Planning", "Q4 sprint", f"{today}T11:00:00", f"{today}T12:00:00", "Conference Room A", "meeting"),
-        ("Lunch Break", "", f"{today}T12:30:00", f"{today}T13:30:00", "", "personal"),
-        ("1:1 with Manager", "Weekly check-in", f"{today}T15:00:00", f"{today}T15:30:00", "Zoom", "meeting"),
-    ]
-    for title, desc, start, end, loc, etype in events:
-        cursor.execute("""
-            INSERT INTO events (id, user_id, title, description, start_time, end_time, location, event_type, created_at)
+            INSERT INTO tasks (id, user_id, title, description, priority, category, status, due_date, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (str(uuid.uuid4()), user_id, title, desc, start, end, loc, etype, now))
-
-    # Sample shopping items
-    items = [
-        ("Tide Pods 42ct", "household", 1, 15.99, "B07QS7GYPF", 1, 30),
-        ("Oat Milk (Oatly)", "grocery", 2, 5.49, "B07NQDSM45", 1, 14),
-        ("Wireless Earbuds", "electronics", 1, 29.99, "B09JQ7J5Q5", 0, None),
-        ("Protein Bars (12pk)", "grocery", 1, 24.99, "B07K3HLBZ1", 1, 21),
-    ]
-    for name, cat, qty, price, asin, auto, freq in items:
-        cursor.execute("""
-            INSERT INTO shopping_items (id, user_id, product_name, category, quantity, estimated_price,
-                amazon_asin, amazon_url, is_auto_reorder, reorder_frequency_days, added_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            str(uuid.uuid4()), user_id, name, cat, qty, price, asin,
-            f"https://www.amazon.com/dp/{asin}", auto, freq, now,
-        ))
-
-    # Sample fitness entry
-    cursor.execute("""
-        INSERT INTO fitness_entries (id, user_id, date, steps, calories_burned, active_minutes, water_glasses, sleep_hours, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (str(uuid.uuid4()), user_id, today, 8901, 420, 45, 6, 7.5, "Good day overall"))
+        """, (str(uuid4()), user_id, title, "", priority, category, "pending", now, now))
 
 
 # Initialize on import

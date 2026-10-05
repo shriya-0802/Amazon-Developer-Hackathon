@@ -383,6 +383,45 @@
                             <input type="email" id="signup-email" placeholder="you@example.com" required>
                         </div>
                         <div class="form-group">
+                            <label for="signup-phone">Phone Number</label>
+                            <input type="tel" id="signup-phone" placeholder="+1234567890">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label for="signup-age">Age</label>
+                                <input type="number" id="signup-age" placeholder="e.g. 28">
+                            </div>
+                            <div class="form-group">
+                                <label for="signup-sex">Sex</label>
+                                <select id="signup-sex">
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label for="signup-ht">Height (cm)</label>
+                                <input type="number" id="signup-ht" placeholder="e.g. 175">
+                            </div>
+                            <div class="form-group">
+                                <label for="signup-wt">Weight (kg)</label>
+                                <input type="number" id="signup-wt" placeholder="e.g. 70">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-diet">Dietary Preference</label>
+                            <select id="signup-diet">
+                                <option value="non-veg">Non-Vegetarian</option>
+                                <option value="veg">Vegetarian</option>
+                                <option value="vegan">Vegan</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-location">Current Location</label>
+                            <input type="text" id="signup-location" placeholder="e.g. Seattle, WA" required />
+                        </div>
+                        <div class="form-group">
                             <label for="signup-password">Password</label>
                             <div class="password-wrapper">
                                 <input type="password" id="signup-password" placeholder="At least 6 characters" required minlength="6">
@@ -496,8 +535,15 @@
                     body: JSON.stringify({
                         name: document.getElementById('signup-name').value,
                         email: document.getElementById('signup-email').value,
+                        phone: document.getElementById('signup-phone').value,
                         password: document.getElementById('signup-password').value,
                         role: document.getElementById('signup-role').value,
+                        age: parseInt(document.getElementById('signup-age').value) || null,
+                        sex: document.getElementById('signup-sex').value,
+                        height_cm: parseFloat(document.getElementById('signup-ht').value) || null,
+                        weight_kg: parseFloat(document.getElementById('signup-wt').value) || null,
+                        diet: document.getElementById('signup-diet').value,
+                        location: document.getElementById('signup-location').value
                     }),
                 });
 
@@ -509,6 +555,7 @@
                 const data = await res.json();
                 localStorage.setItem('lifesync_token', data.token);
                 localStorage.setItem('lifesync_user', JSON.stringify(data));
+                localStorage.setItem('lifesync_is_new_user', 'true');
 
                 successEl.textContent = `✅ Account created! Welcome, ${data.name}. Redirecting...`;
                 successEl.classList.add('visible');

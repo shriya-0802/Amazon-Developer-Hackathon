@@ -37,6 +37,14 @@
                 </div>
             </div>
             <div class="navbar-right">
+                <!-- Daily Streak Badge -->
+                <div class="streak-badge" id="streak-badge" title="Daily Streak">
+                    <i class="fa-solid fa-fire"></i>
+                    <span id="streak-count">0</span>
+                </div>
+                <button class="nav-icon-btn" id="btn-focus-timer" title="Focus Timer">
+                    <i class="fa-solid fa-stopwatch"></i>
+                </button>
                 <button class="nav-icon-btn" id="btn-notifications" title="Notifications">
                     <i class="fa-solid fa-bell"></i>
                     <span class="notif-badge">3</span>
@@ -64,7 +72,7 @@
                     </a>
                     <a href="#" class="sidebar-item" data-tab="schedule" id="nav-schedule">
                         <i class="fa-solid fa-calendar-days"></i>
-                        <span>Schedule</span>
+                        <span>Calendar</span>
                     </a>
                     <a href="#" class="sidebar-item" data-tab="tasks" id="nav-tasks">
                         <i class="fa-solid fa-list-check"></i>
@@ -76,8 +84,18 @@
                         <span>Fitness</span>
                     </a>
                     <a href="#" class="sidebar-item" data-tab="shopping" id="nav-shopping">
-                        <i class="fa-solid fa-cart-shopping"></i>
-                        <span>Shopping</span>
+                        <i class="fa-brands fa-amazon"></i>
+                        <span>Amazon Shop</span>
+                    </a>
+
+                    <div class="nav-section-label" style="margin-top: 24px;">FEATURES</div>
+                    <a href="#" class="sidebar-item" data-tab="mood" id="nav-mood">
+                        <i class="fa-solid fa-face-smile"></i>
+                        <span>Mood Tracker</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="notes" id="nav-notes">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <span>Quick Notes</span>
                     </a>
 
                     <div class="nav-section-label" style="margin-top: 24px;">INSIGHTS</div>
@@ -98,6 +116,10 @@
                             <span class="aws-label">Powered by</span>
                             <span class="aws-service">AWS Bedrock</span>
                         </div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                        <button id="btn-reset-db" style="background: transparent; border: 1px solid #3A4553; color: #8795A1; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"><i class="fa-solid fa-rotate-right" style="margin-right:5px;"></i>Reset Data</button>
+                        <button id="btn-delete-account" style="background: transparent; border: 1px solid #6c2222; color: #c65353; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"><i class="fa-solid fa-trash" style="margin-right:5px;"></i>Delete Account</button>
                     </div>
                 </div>
             </aside>
@@ -159,11 +181,11 @@
                                 </button>
                                 <button class="quick-action-card" data-query="Do I need to reorder anything?" id="qa-shopping">
                                     <div class="qa-icon" style="background: linear-gradient(135deg, #5B2D8E, #3A1A5E);">
-                                        <i class="fa-solid fa-cart-shopping"></i>
+                                        <i class="fa-brands fa-amazon"></i>
                                     </div>
                                     <div class="qa-text">
-                                        <strong>Smart Shopping</strong>
-                                        <span>Reorder suggestions</span>
+                                        <strong>Amazon Shopping</strong>
+                                        <span>Smart reorder suggestions</span>
                                     </div>
                                 </button>
                                 <button class="quick-action-card" data-query="What's the weather like?" id="qa-weather">
@@ -271,6 +293,10 @@
                     <label class="toggle-switch"><input type="checkbox" checked id="toggle-proactive"><span class="toggle-slider"></span></label>
                 </div>
                 <div class="setting-row">
+                    <div><strong>Browser Notifications</strong><p class="setting-desc">Alexa-style desktop alerts</p></div>
+                    <label class="toggle-switch"><input type="checkbox" id="toggle-browser-notif"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="setting-row">
                     <div><strong>MCP Transport</strong><p class="setting-desc">Streamable HTTP (Spec 2025-11-25)</p></div>
                     <span class="setting-value">Active</span>
                 </div>
@@ -284,6 +310,274 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Onboarding Modal (Hidden by default) -->
+    <div class="modal-overlay hidden" id="onboarding-modal">
+        <div class="modal-card" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-rocket" style="color: var(--amazon-orange);"></i> Welcome! Set Up Your LifeSync</h3>
+                <button class="modal-close" id="onboarding-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 0 24px 24px;">
+                <form id="onboarding-form">
+                    <p style="margin-bottom: 18px; font-size: 14px; color: var(--text-secondary);">Let's personalize your experience. Enter events, preferences, and things you'd like LifeSync to remember — just like setting up Alexa!</p>
+                    
+                    <div class="onboarding-section">
+                        <h4 style="font-size: 14px; color: var(--amazon-orange); margin-bottom: 10px;"><i class="fa-solid fa-calendar-days"></i> Your First Event</h4>
+                        <div class="setting-row" style="display: block; padding: 0; border: none;">
+                            <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: var(--text-secondary);">Event Name</label>
+                            <input type="text" id="onboarding-event-title" placeholder="e.g. Mom's Birthday, Team Meeting, Doctor's Appointment" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); margin-bottom: 10px; font-family: inherit; font-size: 14px;">
+                        </div>
+                        <div class="setting-row" style="display: block; padding: 0; border: none;">
+                            <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: var(--text-secondary);">Date & Time</label>
+                            <input type="datetime-local" id="onboarding-event-time" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); margin-bottom: 10px; font-family: inherit; font-size: 14px;">
+                        </div>
+                    </div>
+
+                    <div class="onboarding-section" style="margin-top: 16px;">
+                        <h4 style="font-size: 14px; color: var(--amazon-orange); margin-bottom: 10px;"><i class="fa-solid fa-face-smile"></i> How Are You Feeling Today?</h4>
+                        <div id="onboarding-mood-selector" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                            <button type="button" class="mood-btn" data-mood="great" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-medium); background:var(--bg-input); cursor:pointer; font-size:24px; transition: all 0.2s;">😄</button>
+                            <button type="button" class="mood-btn" data-mood="good" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-medium); background:var(--bg-input); cursor:pointer; font-size:24px; transition: all 0.2s;">🙂</button>
+                            <button type="button" class="mood-btn" data-mood="neutral" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-medium); background:var(--bg-input); cursor:pointer; font-size:24px; transition: all 0.2s;">😐</button>
+                            <button type="button" class="mood-btn" data-mood="low" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-medium); background:var(--bg-input); cursor:pointer; font-size:24px; transition: all 0.2s;">😔</button>
+                            <button type="button" class="mood-btn" data-mood="stressed" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-medium); background:var(--bg-input); cursor:pointer; font-size:24px; transition: all 0.2s;">😰</button>
+                        </div>
+                    </div>
+
+                    <div class="onboarding-section" style="margin-top: 16px;">
+                        <h4 style="font-size: 14px; color: var(--amazon-orange); margin-bottom: 10px;"><i class="fa-solid fa-brain"></i> Things to Remember</h4>
+                        <textarea id="onboarding-notes" placeholder="e.g. Remind me to buy groceries every Friday, I'm vegetarian, My gym is Planet Fitness..." rows="3" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+
+                    <button type="submit" style="width: 100%; padding: 14px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; margin-top: 20px; font-size: 15px; font-family: inherit; transition: all 0.2s;">
+                        <i class="fa-solid fa-bolt"></i> Activate LifeSync
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Modal (Full Interactive Calendar) -->
+    <div class="modal-overlay hidden" id="calendar-modal">
+        <div class="modal-card" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-calendar-days" style="color: var(--amazon-orange);"></i> My Calendar & Events</h3>
+                <button class="modal-close" id="calendar-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px 24px;">
+                <!-- Calendar Grid -->
+                <div class="calendar-container" id="calendar-container">
+                    <div class="calendar-nav">
+                        <button class="cal-nav-btn" id="cal-prev-month"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h4 id="cal-month-title">October 2026</h4>
+                        <button class="cal-nav-btn" id="cal-next-month"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- Dynamically generated -->
+                    </div>
+                </div>
+
+                <!-- Events for Selected Day -->
+                <div id="cal-selected-day-events" style="margin-top: 16px;">
+                    <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 10px;" id="cal-day-label">Events for Today</h4>
+                    <div id="calendar-events-list">
+                        <p style="color: var(--text-muted); text-align:center; padding: 20px; font-size: 13px;">Select a day to see events</p>
+                    </div>
+                </div>
+
+                <!-- Add New Event -->
+                <div style="border-top: 1px solid var(--border-medium); padding-top: 16px; margin-top: 16px;">
+                    <h4 style="margin-bottom: 12px; font-size: 15px;"><i class="fa-solid fa-plus" style="color: var(--amazon-orange);"></i> Add New Event</h4>
+                    <form id="add-event-form">
+                        <input type="text" id="cal-event-title" placeholder="Event name (e.g. Team Meeting, Doctor Visit)" required style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); margin-bottom: 10px; font-family: inherit; font-size: 14px;">
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="datetime-local" id="cal-event-time" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px;">
+                            <select id="cal-event-type" style="width: 140px; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px;">
+                                <option value="meeting">🏢 Meeting</option>
+                                <option value="personal">🏠 Personal</option>
+                                <option value="health">💊 Health</option>
+                                <option value="social">🎉 Social</option>
+                                <option value="deadline">⏰ Deadline</option>
+                            </select>
+                        </div>
+                        <textarea id="cal-event-desc" placeholder="Description or notes (optional)" rows="2" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); margin-bottom: 10px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+                                <input type="checkbox" id="cal-event-remind" checked style="accent-color: var(--amazon-orange);"> 
+                                <i class="fa-solid fa-bell" style="color: var(--amazon-orange);"></i> Alexa+ Reminder
+                            </label>
+                        </div>
+                        <button type="submit" style="width: 100%; padding: 12px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-family: inherit; transition: all 0.2s;">
+                            <i class="fa-solid fa-plus"></i> Add Event
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Focus Timer Modal -->
+    <div class="modal-overlay hidden" id="focus-timer-modal">
+        <div class="modal-card" style="max-width: 400px; text-align: center;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-stopwatch" style="color: var(--amazon-orange);"></i> Focus Timer</h3>
+                <button class="modal-close" id="focus-timer-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <div class="focus-timer-display" id="focus-timer-display">
+                    <svg viewBox="0 0 200 200" width="180" height="180">
+                        <circle cx="100" cy="100" r="90" fill="none" stroke="var(--border-subtle)" stroke-width="6"/>
+                        <circle cx="100" cy="100" r="90" fill="none" stroke="var(--amazon-orange)" stroke-width="6" 
+                            stroke-dasharray="565.49" stroke-dashoffset="0" 
+                            stroke-linecap="round" transform="rotate(-90 100 100)"
+                            id="focus-timer-circle"/>
+                    </svg>
+                    <div class="focus-timer-text" id="focus-timer-text">25:00</div>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 12px 0;">Pomodoro Technique: 25 min focus → 5 min break</p>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px;">
+                    <button class="focus-btn" id="focus-start" style="background: var(--amazon-orange); color: black; font-weight: 700; padding: 10px 28px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                        <i class="fa-solid fa-play"></i> Start
+                    </button>
+                    <button class="focus-btn" id="focus-pause" style="background: var(--bg-input); color: var(--text-primary); padding: 10px 28px; border: 1px solid var(--border-medium); border-radius: 8px; cursor: pointer; font-size: 14px; display: none;">
+                        <i class="fa-solid fa-pause"></i> Pause
+                    </button>
+                    <button class="focus-btn" id="focus-reset" style="background: var(--bg-input); color: var(--text-primary); padding: 10px 28px; border: 1px solid var(--border-medium); border-radius: 8px; cursor: pointer; font-size: 14px;">
+                        <i class="fa-solid fa-rotate-right"></i> Reset
+                    </button>
+                </div>
+                <div style="margin-top: 16px;">
+                    <label style="font-size: 12px; color: var(--text-muted);">Duration (minutes)</label>
+                    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 6px;">
+                        <button class="focus-preset" data-min="15" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-primary); cursor: pointer; font-size: 12px;">15</button>
+                        <button class="focus-preset active" data-min="25" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--amazon-orange); background: rgba(255,153,0,0.1); color: var(--amazon-orange); cursor: pointer; font-size: 12px; font-weight: 600;">25</button>
+                        <button class="focus-preset" data-min="45" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-primary); cursor: pointer; font-size: 12px;">45</button>
+                        <button class="focus-preset" data-min="60" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-primary); cursor: pointer; font-size: 12px;">60</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Amazon Shopping Modal -->
+    <div class="modal-overlay hidden" id="shopping-modal">
+        <div class="modal-card" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3><i class="fa-brands fa-amazon" style="color: var(--amazon-orange);"></i> Amazon Smart Shopping</h3>
+                <button class="modal-close" id="shopping-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px 24px;">
+                <!-- Search -->
+                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                    <input type="text" id="amazon-search-input" placeholder="Search Amazon products..." style="flex:1; padding: 10px 14px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px;">
+                    <button id="amazon-search-btn" style="padding: 10px 20px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                        <i class="fa-solid fa-search"></i> Search
+                    </button>
+                </div>
+
+                <!-- Quick Categories -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                    <button class="amazon-cat-btn" data-cat="household" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🏠 Household</button>
+                    <button class="amazon-cat-btn" data-cat="grocery" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🛒 Grocery</button>
+                    <button class="amazon-cat-btn" data-cat="electronics" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">📱 Electronics</button>
+                    <button class="amazon-cat-btn" data-cat="" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🔥 All Deals</button>
+                </div>
+
+                <!-- Product Grid -->
+                <div id="amazon-product-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;">
+                    <div class="ctx-widget skeleton-widget" style="height: 200px;"></div>
+                    <div class="ctx-widget skeleton-widget" style="height: 200px;"></div>
+                </div>
+
+                <!-- Your Shopping List -->
+                <div style="border-top: 1px solid var(--border-medium); padding-top: 16px; margin-top: 20px;">
+                    <h4 style="font-size: 14px; margin-bottom: 10px;"><i class="fa-solid fa-list-check" style="color: var(--amazon-orange);"></i> Your Shopping List</h4>
+                    <div id="shopping-list-items">
+                        <div class="ctx-widget skeleton-widget" style="height: 60px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mood Tracker Modal -->
+    <div class="modal-overlay hidden" id="mood-modal">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-face-smile" style="color: var(--amazon-orange);"></i> Mood Tracker</h3>
+                <button class="modal-close" id="mood-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px 24px;">
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">How are you feeling right now? Track your mood to unlock insights about your productivity patterns.</p>
+                <div id="mood-selector" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;">
+                    <button class="mood-option" data-mood="great" title="Great">
+                        <span style="font-size: 36px;">😄</span>
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Great</span>
+                    </button>
+                    <button class="mood-option" data-mood="good" title="Good">
+                        <span style="font-size: 36px;">🙂</span>
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Good</span>
+                    </button>
+                    <button class="mood-option" data-mood="neutral" title="Neutral">
+                        <span style="font-size: 36px;">😐</span>
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Neutral</span>
+                    </button>
+                    <button class="mood-option" data-mood="low" title="Low">
+                        <span style="font-size: 36px;">😔</span>
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Low</span>
+                    </button>
+                    <button class="mood-option" data-mood="stressed" title="Stressed">
+                        <span style="font-size: 36px;">😰</span>
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Stressed</span>
+                    </button>
+                </div>
+                <textarea id="mood-note" placeholder="Optional: What's on your mind?" rows="2" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px; resize: vertical; margin-bottom: 12px;"></textarea>
+                <button id="mood-save-btn" style="width: 100%; padding: 12px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; font-size: 15px;" disabled>Select a mood to save</button>
+                
+                <!-- Mood History -->
+                <div style="margin-top: 20px; border-top: 1px solid var(--border-medium); padding-top: 16px;">
+                    <h4 style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Recent Mood History</h4>
+                    <div id="mood-history" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Notes Modal -->
+    <div class="modal-overlay hidden" id="notes-modal">
+        <div class="modal-card" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-note-sticky" style="color: var(--amazon-orange);"></i> Quick Notes</h3>
+                <button class="modal-close" id="notes-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px 24px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                    <input type="text" id="note-input" placeholder="Jot down a quick note..." style="flex:1; padding: 10px 14px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px;">
+                    <button id="note-add-btn" style="padding: 10px 16px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                <div id="notes-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alexa Reminder Toast (floating) -->
+    <div class="alexa-toast hidden" id="alexa-toast">
+        <div class="alexa-toast-icon">
+            <div class="alexa-ring"></div>
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div class="alexa-toast-body">
+            <strong>Alexa+ Reminder</strong>
+            <p id="alexa-toast-msg"></p>
+        </div>
+        <button class="alexa-toast-dismiss" id="alexa-toast-dismiss"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <!-- Message Template -->

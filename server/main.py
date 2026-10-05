@@ -103,6 +103,67 @@ async def mcp_sse_endpoint(request: Request):
     )
 
 
+# ─── Real-time Reminder Endpoint ────────────────────────────────────────────
+
+@app.get("/api/reminders/{user_id}")
+async def get_active_reminders(user_id: str):
+    """Check for upcoming events within the next 60 minutes and return them as reminders."""
+    now = datetime.now()
+    window_end = now + timedelta(minutes=60)
+    
+    events = db.get_events(user_id)
+    reminders = []
+    
+    for event in events:
+        try:
+            # Parse start_time — handles both "2026-10-05T16:42" and "2026-10-05T16:42:00"
+            start_str = event.get("start_time", "")
+            if not start_str:
+                continue
+            
+            # Try multiple formats
+            event_time = None
+            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+                try:
+                    event_time = datetime.strptime(start_str, fmt)
+                    break
+                except ValueError:
+                    continue
+            
+            if event_time is None:
+                continue
+            
+            # Check if event is within the reminder window (now to 60 min from now)
+            if now <= event_time <= window_end:
+                mins_left = int((event_time - now).total_seconds() / 60)
+                reminders.append({
+                    "id": event.get("id"),
+                    "title": event.get("title", "Event"),
+                    "time": start_str,
+                    "minutes_until": mins_left,
+                    "message": f"⏰ \"{event.get('title')}\" starts in {mins_left} minute{'s' if mins_left != 1 else ''}!",
+                    "type": "event_reminder"
+                })
+            
+            # Also check for events happening today that haven't passed
+            if event_time.date() == now.date() and event_time > now:
+                hrs_left = int((event_time - now).total_seconds() / 3600)
+                if hrs_left > 1 and hrs_left <= 24:
+                    reminders.append({
+                        "id": event.get("id"),
+                        "title": event.get("title", "Event"),
+                        "time": start_str,
+                        "hours_until": hrs_left,
+                        "message": f"📅 \"{event.get('title')}\" is scheduled for today at {event_time.strftime('%I:%M %p')} ({hrs_left}h away)",
+                        "type": "today_event"
+                    })
+        except Exception as e:
+            print(f"Reminder parse error: {e}")
+            continue
+    
+    return JSONResponse(content={"reminders": reminders, "total": len(reminders), "checked_at": now.isoformat()})
+
+
 # ─── REST API for Web Simulation ────────────────────────────────────────────
 
 @app.post("/api/chat")
@@ -157,7 +218,7 @@ async def health_check():
         "version": "1.0.0",
         "mcp_spec": "2025-11-25",
         "transport": "Streamable HTTP",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat(),
     }
 
 
@@ -172,12 +233,20 @@ async def signup(request: Request):
     password = body.get("password", "")
     role = body.get("role", "user")
 
+    phone = body.get("phone", "").strip()
+    age = body.get("age")
+    sex = body.get("sex")
+    height_cm = body.get("height_cm")
+    weight_kg = body.get("weight_kg")
+    diet = body.get("diet")
+    location = body.get("location")
+
     if not email or not name or not password:
         raise HTTPException(status_code=400, detail="Email, name, and password are required")
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
-    result = db.create_user(email, name, password, role)
+    result = db.create_user(email, name, password, role, phone, age=age, sex=sex, height_cm=height_cm, weight_kg=weight_kg, diet=diet, location=location)
     if "error" in result:
         raise HTTPException(status_code=409, detail=result["error"])
     return JSONResponse(content=result)
@@ -323,34 +392,78 @@ async def get_user_activity(user_id: str, limit: int = 20):
     return JSONResponse(content={"activities": log, "total": len(log)})
 
 
+# ─── Admin / Maintenance Endpoints ──────────────────────────────────────────
+
+@app.post("/api/users/{user_id}/reset")
+async def reset_user_data(user_id: str):
+    """Reset all data for a specific user, keeping their account."""
+    conn = db.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM tasks WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM events WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM shopping_items WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM fitness_entries WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM activity_log WHERE user_id = ?", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    
+    return JSONResponse(content={"message": "User data has been completely reset"})
+
+@app.delete("/api/users/{user_id}")
+async def delete_user_account(user_id: str):
+    """Delete a user account and all associated data."""
+    conn = db.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM tasks WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM events WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM shopping_items WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM fitness_entries WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM activity_log WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+        
+    return JSONResponse(content={"message": "Account successfully deleted"})
+
+
 # ─── Amazon Product Search (Simulated) ──────────────────────────────────────
+
+import urllib.parse
 
 @app.get("/api/amazon/search")
 async def amazon_product_search(q: str = ""):
     """Simulated Amazon Product Search — returns realistic product data."""
-    # In production, this would use Amazon Product Advertising API (PA-API 5.0)
+    # Create search urls dynamically instead of using DP links to prevent 404s
     products = [
         {"asin": "B07QS7GYPF", "title": "Tide PODS Laundry Detergent Soap Pods, 42ct",
          "price": 15.99, "rating": 4.7, "reviews": 128453, "category": "Household",
          "image": "https://m.media-amazon.com/images/I/71VU5LMQL3L._AC_SL1500_.jpg",
-         "url": "https://www.amazon.com/dp/B07QS7GYPF", "prime": True},
+         "prime": True},
         {"asin": "B07NQDSM45", "title": "Oatly Original Oat Milk, 32 fl oz",
          "price": 5.49, "rating": 4.5, "reviews": 34821, "category": "Grocery",
          "image": "https://m.media-amazon.com/images/I/61FZ09Q4JwL._SL1500_.jpg",
-         "url": "https://www.amazon.com/dp/B07NQDSM45", "prime": True},
+         "prime": True},
         {"asin": "B09JQ7J5Q5", "title": "Samsung Galaxy Buds2 Pro Wireless Earbuds",
          "price": 149.99, "rating": 4.4, "reviews": 15678, "category": "Electronics",
          "image": "https://m.media-amazon.com/images/I/51cVeGfdkHL._AC_SL1500_.jpg",
-         "url": "https://www.amazon.com/dp/B09JQ7J5Q5", "prime": True},
+         "prime": True},
         {"asin": "B07K3HLBZ1", "title": "RXBAR Protein Bars, Variety Pack, 12 Count",
          "price": 24.99, "rating": 4.6, "reviews": 45213, "category": "Grocery",
          "image": "https://m.media-amazon.com/images/I/81Y7nVGi0QL._SL1500_.jpg",
-         "url": "https://www.amazon.com/dp/B07K3HLBZ1", "prime": True},
+         "prime": True},
         {"asin": "B0B5F54Z3Q", "title": "Amazon Echo Dot (5th Gen) Smart Speaker with Alexa",
          "price": 49.99, "rating": 4.7, "reviews": 298456, "category": "Electronics",
          "image": "https://m.media-amazon.com/images/I/71xoR4A6q-L._AC_SL1000_.jpg",
-         "url": "https://www.amazon.com/dp/B0B5F54Z3Q", "prime": True},
+         "prime": True},
     ]
+
+    for p in products:
+        # Use a search link instead of a direct product link to avoid 404 pages during tests
+        p["url"] = f"https://www.amazon.com/s?k={urllib.parse.quote(p['title'])}"
 
     if q:
         q_lower = q.lower()

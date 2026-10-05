@@ -183,6 +183,30 @@ body {
     gap: 8px;
 }
 
+/* ── Streak Badge ──────────────────────────────────────────────── */
+.streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, rgba(255,99,0,0.15), rgba(255,153,0,0.1));
+    border: 1px solid rgba(255,153,0,0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--amazon-orange);
+    cursor: default;
+    transition: all var(--transition-fast);
+}
+.streak-badge i {
+    font-size: 14px;
+    animation: streak-fire 1.5s infinite;
+}
+@keyframes streak-fire {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
 .nav-icon-btn {
     position: relative;
     background: none;
@@ -989,6 +1013,355 @@ body {
     background: #fff;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   INTERACTIVE CALENDAR
+   ══════════════════════════════════════════════════════════════════ */
+
+.calendar-container {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.calendar-nav h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.cal-nav-btn {
+    background: none;
+    border: 1px solid var(--border-medium);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+.cal-nav-btn:hover {
+    background: rgba(255,153,0,0.1);
+    border-color: var(--amazon-orange);
+    color: var(--amazon-orange);
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+}
+.calendar-weekdays div {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 6px 0;
+    text-transform: uppercase;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid transparent;
+}
+.cal-day:hover {
+    background: rgba(255,153,0,0.08);
+    border-color: rgba(255,153,0,0.2);
+}
+.cal-day.other-month {
+    color: var(--text-muted);
+    opacity: 0.4;
+}
+.cal-day.today {
+    background: rgba(255,153,0,0.15);
+    border-color: var(--amazon-orange);
+    font-weight: 700;
+    color: var(--amazon-orange);
+}
+.cal-day.selected {
+    background: var(--amazon-orange);
+    color: #000;
+    font-weight: 700;
+    border-color: var(--amazon-orange);
+}
+.cal-day.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--amazon-orange);
+}
+.cal-day.selected.has-events::after {
+    background: #000;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FOCUS TIMER
+   ══════════════════════════════════════════════════════════════════ */
+
+.focus-timer-display {
+    position: relative;
+    display: inline-block;
+    margin: 16px 0;
+}
+.focus-timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOOD TRACKER
+   ══════════════════════════════════════════════════════════════════ */
+
+.mood-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 14px;
+    border: 2px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    background: var(--bg-input);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.mood-option:hover {
+    border-color: rgba(255,153,0,0.4);
+    transform: scale(1.08);
+}
+.mood-option.selected {
+    border-color: var(--amazon-orange);
+    background: rgba(255,153,0,0.1);
+    box-shadow: 0 0 12px rgba(255,153,0,0.2);
+    transform: scale(1.1);
+}
+
+.mood-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   QUICK NOTES
+   ══════════════════════════════════════════════════════════════════ */
+
+.note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    transition: all var(--transition-fast);
+}
+.note-item:hover {
+    border-color: rgba(255,153,0,0.2);
+}
+.note-item .note-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+.note-item .note-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.note-item .note-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    transition: color var(--transition-fast);
+}
+.note-item .note-delete:hover {
+    color: var(--amazon-red);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AMAZON PRODUCT CARDS
+   ══════════════════════════════════════════════════════════════════ */
+
+.amazon-product-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    transition: all var(--transition-fast);
+}
+.amazon-product-card:hover {
+    border-color: var(--amazon-orange);
+    box-shadow: var(--shadow-orange);
+    transform: translateY(-2px);
+}
+.amazon-product-card img {
+    width: 100%;
+    height: 120px;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background: #fff;
+    margin-bottom: 10px;
+}
+.amazon-product-card .product-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.amazon-product-card .product-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--amazon-orange);
+    margin-bottom: 4px;
+}
+.amazon-product-card .product-rating {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.amazon-product-card .prime-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #00A8E1;
+    background: rgba(0,168,225,0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-top: 4px;
+}
+.amazon-product-card .amazon-buy-btn {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin-top: 10px;
+    background: var(--amazon-orange);
+    color: #000;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+.amazon-product-card .amazon-buy-btn:hover {
+    background: var(--amazon-orange-hover);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ALEXA TOAST / REMINDER
+   ══════════════════════════════════════════════════════════════════ */
+
+.alexa-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+    border: 1px solid var(--amazon-orange);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(255,153,0,0.25), 0 4px 16px rgba(0,0,0,0.5);
+    z-index: 400;
+    max-width: 380px;
+    animation: toastSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes toastSlide {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.alexa-toast-icon {
+    position: relative;
+    font-size: 20px;
+    color: var(--amazon-orange);
+    flex-shrink: 0;
+}
+.alexa-ring {
+    position: absolute;
+    inset: -6px;
+    border: 2px solid var(--amazon-orange);
+    border-radius: 50%;
+    animation: alexa-pulse 2s infinite;
+}
+@keyframes alexa-pulse {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.5); }
+}
+.alexa-toast-body strong {
+    display: block;
+    font-size: 13px;
+    color: var(--amazon-orange);
+    margin-bottom: 2px;
+}
+.alexa-toast-body p {
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+.alexa-toast-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    flex-shrink: 0;
+    transition: color var(--transition-fast);
+}
+.alexa-toast-dismiss:hover { color: var(--text-primary); }
+
 /* ── Utility ─────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
@@ -1033,4 +1406,51 @@ body {
     .sidebar.open { left: 0; }
     .quick-actions-grid { grid-template-columns: 1fr; }
     .brand-badge { display: none; }
+    .streak-badge { display: none; }
+    .status-pill { display: none; }
+}
+
+/* ── Simulated Device Notification ──────────────────────────────── */
+.simulated-notif {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 9999;
+    transform: translateY(-150%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.simulated-notif.visible {
+    transform: translateY(0);
+}
+.sim-notif-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+}
+.sim-notif-content strong {
+    display: block;
+    font-size: 13px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 2px;
+}
+.sim-notif-content p {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    margin: 0;
+    line-height: 1.3;
 }

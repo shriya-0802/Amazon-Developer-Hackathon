@@ -14,7 +14,7 @@ class CalendarAgent:
 
     def _get_events(self, session_id: str) -> list:
         """Pull real events from database for this user."""
-        today = datetime.utcnow().strftime("%Y-%m-%d")
+        today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
         events = db.get_events(session_id, date=today)
         return events
 
@@ -69,11 +69,17 @@ class CalendarAgent:
             title = message.replace("add meeting", "").replace("add event", "").replace("create event", "").strip()
             if not title:
                 title = "New Event"
-            today = datetime.utcnow().strftime("%Y-%m-%d")
+            now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+            today = now.strftime("%Y-%m-%d")
+            
+            # Default to next hour
+            start_dt = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            end_dt = start_dt + timedelta(hours=1)
+            
             db.add_event(session_id, {
                 "title": title,
-                "start_time": f"{today}T10:00:00",
-                "end_time": f"{today}T11:00:00",
+                "start_time": start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                "end_time": end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
                 "event_type": "meeting",
             })
             return {

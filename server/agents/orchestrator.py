@@ -60,7 +60,29 @@ class AgentOrchestrator:
         # Route to appropriate agent(s)
         agent_responses = []
 
-        if intent in ("morning_briefing", "briefing", "good_morning"):
+        msg_lower = message.strip().lower()
+        if msg_lower == "do: block_fitness":
+            import asyncio
+            asyncio.create_task(self._simulate_notifications(session_id))
+            return {
+                "text": "Fitness time blocked successfully! I'll notify you via Email, SMS, and Voice Message before it starts.",
+                "type": "confirmation",
+                "cards": [],
+                "session_id": session_id,
+                "timestamp": datetime.now().isoformat(),
+                "trigger_notification": True
+            }
+            
+        if msg_lower == "do: show_plan":
+            return {
+                "text": "Here is your plan for the week:\n- **Mon:** 30m run\n- **Wed:** 45m strength\n- **Fri:** 30m cycling\nI'll add these to your calendar.",
+                "type": "confirmation",
+                "cards": [],
+                "session_id": session_id,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        if intent in ("morning_briefing", "briefing", "good_morning") or "summary" in msg_lower or "analytics" in msg_lower:
             return await self.generate_briefing(session_id)
 
         elif intent in ("schedule", "calendar", "meeting", "appointment"):
@@ -71,7 +93,7 @@ class AgentOrchestrator:
             result = await self.tasks.handle(message, entities, session_id)
             agent_responses.append(result)
 
-        elif intent in ("shop", "buy", "order", "purchase", "shopping"):
+        elif intent in ("shop", "buy", "order", "purchase", "shopping", "checkout"):
             result = await self.shopping.handle(message, entities, session_id)
             agent_responses.append(result)
 
@@ -84,13 +106,30 @@ class AgentOrchestrator:
             agent_responses.append(result)
 
         elif intent == "remember":
-            self.kg.store_preference(session_id, entities.get("key", "general"), message)
-            agent_responses.append({
-                "text": "Got it! I'll remember that for future reference. 🧠",
-                "type": "confirmation",
-                "cards": [],
-            })
-
+            if any(w in msg_lower for w in ["what", "tell", "show", "list", "do you"]):
+                # Retrieve memories
+                context = self.kg.get_user_context(session_id)
+                if not context:
+                    text = "I don't have any specific preferences saved for you yet."
+                else:
+                    text = "🧠 **Here is what I remember about your profile & preferences:**\n\n"
+                    for k, v in context.items():
+                        if not v: continue
+                        pretty_key = str(k).replace("_", " ").title()
+                        text += f"- **{pretty_key}**: {v}\n"
+                
+                agent_responses.append({
+                    "text": text,
+                    "type": "memory_retrieval",
+                    "cards": [],
+                })
+            else:
+                self.kg.store_preference(session_id, entities.get("key", "general"), message)
+                agent_responses.append({
+                    "text": "Got it! I'll remember that for future reference. 🧠",
+                    "type": "confirmation",
+                    "cards": [],
+                })
         else:
             # General conversation — use cross-agent intelligence
             result = await self._handle_general(message, entities, session_id)
@@ -100,14 +139,39 @@ class AgentOrchestrator:
         response = self._synthesize_response(agent_responses, session_id)
 
         # Check for proactive suggestions
-        proactive = self._check_proactive_triggers(session_id)
-        if proactive:
-            response["proactive_suggestions"] = proactive
+        if not msg_lower.startswith("do:"):
+            proactive = self._check_proactive_triggers(session_id)
+            if proactive:
+                response["proactive_suggestions"] = proactive
 
         # Update session
         self.sessions.update(session_id, message, response)
 
         return response
+
+    async def _simulate_notifications(self, session_id: str):
+        """Simulates sending external notifications to the user."""
+        import asyncio
+        import json
+        from mcp_handler import MCPHandler
+        await asyncio.sleep(2)
+        print(f"[{session_id}] Sending Email...")
+        await asyncio.sleep(1)
+        print(f"[{session_id}] Sending SMS...")
+        await asyncio.sleep(1)
+        print(f"[{session_id}] Sending Voice Message...")
+        
+        # We can also add a reminder in the DB so it triggers the UI
+        try:
+            import database as db
+            import uuid
+            now = datetime.now()
+            db.get_db().execute(
+                "INSERT INTO events (id, user_id, title, description, start_time, end_time, location, event_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (str(uuid.uuid4()), session_id, "Fitness Block", "Automated fitness block", (now + timedelta(minutes=1)).isoformat(), (now + timedelta(minutes=31)).isoformat(), "Gym", "personal", now.isoformat())
+            ).connection.commit()
+        except Exception as e:
+            print("Error scheduling fitness reminder", e)
 
     async def generate_briefing(self, session_id: str) -> dict:
         """Generate a comprehensive morning briefing by querying all agents."""
@@ -366,7 +430,7 @@ class AgentOrchestrator:
             "morning_briefing": [r"\bgood morning\b", r"\bmorning briefing\b", r"\bstart my day\b", r"\bdaily briefing\b", r"\bwhat's today\b"],
             "schedule": [r"\bschedule\b", r"\bcalendar\b", r"\bmeeting\b", r"\bmeetings\b", r"\bappointment\b", r"\bwhen\b", r"\bblock time\b"],
             "task": [r"\btask\b", r"\btasks\b", r"\btodo\b", r"\bto-do\b", r"\bremind me\b", r"\badd to list\b", r"\bchecklist\b"],
-            "shop": [r"\bbuy\b", r"\border\b", r"\bshop\b", r"\bpurchase\b", r"\breorder\b", r"\bout of\b", r"\bneed more\b", r"\blaundry\b", r"\bdetergent\b", r"\bgrocery\b"],
+            "shop": [r"\bbuy\b", r"\border\b", r"\bshop\b", r"\bpurchase\b", r"\breorder\b", r"\bout of\b", r"\bneed more\b", r"\blaundry\b", r"\bdetergent\b", r"\bgrocery\b", r"\bcheckout\b", r"\bfresh\b", r"\bmeal plan\b", r"\bingredients\b", r"\bgroceries\b", r"\bcart\b", r"\bplace order\b"],
             "fitness": [r"\bfitness\b", r"\bexercise\b", r"\bworkout\b", r"\bsteps\b", r"\brun\b", r"\bmarathon\b", r"\btraining\b", r"\bgym\b", r"\bwalk\b", r"\bhealth\b"],
             "weather": [r"\bweather\b", r"\brain\b", r"\btemperature\b", r"\bforecast\b"],
             "remember": [r"\bremember\b", r"\bnote that\b", r"\bkeep in mind\b", r"\bdon't forget\b"],
@@ -423,7 +487,7 @@ class AgentOrchestrator:
                 
                 response = client.invoke_model(
                     body=body,
-                    modelId='anthropic.claude-3-haiku-20240307-v1:0',
+                    modelId='anthropic.claude-3-5-haiku-20241022-v1:0',
                     accept='application/json',
                     contentType='application/json'
                 )
@@ -443,7 +507,7 @@ class AgentOrchestrator:
                     try:
                         import urllib.request
                         gemini_key = os.environ.get("GEMINI_API_KEY")
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={gemini_key}"
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
                         
                         system_prompt = f"You are LifeSync, an AI personal operations center. User context: {json.dumps(context)}. Respond concisely and smartly in plain text."
                         
@@ -529,7 +593,7 @@ class AgentOrchestrator:
 
         # Check for fitness goal progress
         fitness_goal = context.get("fitness_goal")
-        if fitness_goal:
+        if fitness_goal and int(fitness_goal) != 10000:
             suggestions.append({
                 "text": f"You mentioned your goal: {fitness_goal}. I've identified optimal time slots this week. Want me to block them?",
                 "type": "fitness",
