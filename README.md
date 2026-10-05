@@ -118,10 +118,3 @@ lifesync/
 | Serverless | AWS Lambda (proactive triggers) |
 | Web Simulation | Vite, Vanilla JS, CSS |
 
-## 📝 Product Feedback
-
-*See submission for detailed product feedback on MCP spec, AWS Bedrock, AgentCore, and Strands SDK.*
-
-## 📄 License
-
-Apache License 2.0 — see [LICENSE](LICENSE) for details.
