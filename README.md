@@ -1,10 +1,7 @@
 # 🧠 LifeSync — AI-Powered Proactive Personal Operations Center
 
 > **An Alexa+ MCP Server that doesn't wait for commands — it anticipates your needs.**
-
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![MCP Spec](https://img.shields.io/badge/MCP-2025--11--25-green.svg)](https://modelcontextprotocol.io)
-[![AWS](https://img.shields.io/badge/AWS-Bedrock%20%7C%20AgentCore%20%7C%20Strands-orange.svg)](https://aws.amazon.com)
+Link-> https://lifesync-lxks.onrender.com/
 
 ## 🎯 What is LifeSync?
 
