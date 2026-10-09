@@ -14,6 +14,18 @@ class ShoppingAgent:
     async def handle(self, message: str, entities: dict, session_id: str) -> dict:
         msg = message.lower()
 
+        if "track" in msg:
+            return {
+                "text": "Sure! I'm pulling up your active orders and tracking information.",
+                "type": "amazon_tracking",
+                "cards": [{
+                    "type": "action_card",
+                    "title": "📍 Track Orders",
+                    "body": "View the live status of your Amazon shipments.",
+                    "actions": [{"label": "Open Tracking", "value": "open_tracking"}]
+                }]
+            }
+
         if any(w in msg for w in ["out of", "need more", "reorder", "buy more"]):
             item_name = self._extract_item(message)
             items = db.get_shopping_list(session_id)
@@ -49,49 +61,37 @@ class ShoppingAgent:
             return await self.get_suggestions_response(session_id)
 
         elif any(w in msg for w in ["groceries", "ingredients", "meal plan", "fresh", "diet"]):
-            import json
-            user = db.get_user_by_id(session_id)
-            prefs = json.loads(user.get("preferences", "{}")) if user else {}
-            diet = prefs.get("diet", "non-veg")
-            
-            if diet == "veg":
-                items = [("Aashirvaad Whole Wheat Atta 5kg", 14.99, "https://amazon.com"), ("Haldiram's Paneer 400g", 6.99, "https://amazon.com"), ("Tata Sampann Moong Dal", 4.99, "https://amazon.com"), ("Mother Dairy Ghee", 12.99, "https://amazon.com")]
-            elif diet == "vegan":
-                items = [("Organic Poha 2lb", 3.99, "https://amazon.com"), ("Oatly Oat Milk", 5.49, "https://amazon.com"), ("Garbanzo Beans (Chole)", 2.99, "https://amazon.com"), ("MDH Chana Masala", 2.49, "https://amazon.com")]
-            else:
-                items = [("Fresh Chicken Breast 2lb", 12.99, "https://amazon.com"), ("Shan Tikka Masala Mix", 1.99, "https://amazon.com"), ("India Gate Basmati Rice 10lb", 19.99, "https://amazon.com"), ("Amul Butter", 4.99, "https://amazon.com")]
-                
-            body_txt = ""
-            total = 0
-            for name, price, url in items:
-                db.add_shopping_item(session_id, {"product_name": name, "estimated_price": price, "quantity": 1, "amazon_url": url})
-                body_txt += f"✅ {name} — ${price}\n"
-                total += price
-                
             return {
-                "text": f"🛒 **Amazon Fresh Auto-Cart**\nI analyzed your {diet.title()} North Indian 7-day meal plan and automatically added {len(items)} required ingredients to your Amazon Fresh cart!\n\n**Total Estimated Cost:** ${total:.2f}\n\nSay 'checkout' when you are ready to place the order.",
+                "text": "🛒 I can help you shop for groceries on Amazon Fresh! What specific items do you need?",
                 "type": "amazon_fresh",
-                "cards": [{
-                    "type": "info_card",
-                    "title": "🛒 Amazon Fresh Meal Prep",
-                    "body": body_txt.strip(),
-                }]
+                "cards": []
             }
 
         elif any(w in msg for w in ["checkout", "place order", "buy it", "confirm"]):
             items = db.get_shopping_list(session_id)
             if not items:
                 return {
-                    "text": "Your cart is currently empty!",
+                    "text": "Your cart is currently empty! Add items first before checking out.",
                     "type": "amazon_checkout",
                     "cards": [],
                 }
             
-            # Simulate checkout by marking items as purchased (or just clearing the "cart")
+            # Real checkout simulation: convert shopping items to orders
             total = sum((i.get("estimated_price", 0) or 0) * i.get("quantity", 1) for i in items)
             
+            order_ids = []
             for i in items:
-                pass
+                # Add to orders table
+                order_result = db.add_order(session_id, {
+                    "product_name": i["product_name"],
+                    "amazon_url": i.get("amazon_url", ""),
+                    "quantity": i.get("quantity", 1),
+                    "total_price": (i.get("estimated_price", 0) or 0) * i.get("quantity", 1)
+                })
+                order_ids.append(order_result["tracking_id"])
+                
+                # Remove from shopping list since it's purchased
+                db.delete_shopping_item(i["id"])
                 
             from datetime import datetime, timedelta
             now = datetime.utcnow() + timedelta(hours=5, minutes=30)
@@ -101,14 +101,14 @@ class ShoppingAgent:
             end_str = end_time.strftime("%I:%M %p").lstrip("0")
                 
             return {
-                "text": f"🎉 **Order Placed Successfully!**\n\nYour Amazon Fresh delivery for {len(items)} items (${total:.2f}) has been confirmed. It will arrive today between {start_str} and {end_str}.",
+                "text": f"🎉 **Order Placed Successfully!**\n\nYour Amazon Fresh delivery for {len(items)} items (${total:.2f}) has been confirmed. Tracking IDs generated.",
                 "type": "amazon_checkout",
                 "cards": [{
                     "type": "info_card",
                     "title": "📦 Delivery Scheduled",
-                    "body": f"Total Charged: **${total:.2f}**\nExpected Delivery: Today, {start_str} - {end_str}\n\nClick the link below to track your driver on the live map.",
+                    "body": f"Total Charged: **${total:.2f}**\nExpected Delivery: Today, {start_str} - {end_str}\n\nCheck the **Tracking** tab to see your live order status.",
                     "actions": [
-                        {"label": "📍 Track Live Delivery", "value": "/tracking.html"}
+                        {"label": "📍 Track Orders", "value": "open_tracking"}
                     ]
                 }]
             }
@@ -155,8 +155,14 @@ class ShoppingAgent:
             total += price * (i.get("quantity", 1))
             auto = " 🔄" if i.get("is_auto_reorder") else ""
             text += f"{status} **{i['product_name']}** — ${price:.2f} x{i.get('quantity', 1)}{auto}\n"
-            if i.get("amazon_url"):
-                text += f"   🔗 [View on Amazon]({i['amazon_url']})\n"
+            
+            # Generate real search URL if missing or generic
+            url = i.get("amazon_url")
+            if not url or url == "https://amazon.com":
+                import urllib.parse
+                url = "https://www.amazon.com/s?k=" + urllib.parse.quote(i['product_name'])
+                
+            text += f"   🔗 [View on Amazon]({url})\n"
 
         text += f"\n💰 Estimated total: **${total:.2f}**"
 

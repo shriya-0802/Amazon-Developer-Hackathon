@@ -325,6 +325,13 @@ async def toggle_shopping_item(item_id: str):
     return JSONResponse(content=result)
 
 
+@app.delete("/api/shopping/{item_id}")
+async def delete_shopping_item(item_id: str):
+    """Delete item from shopping list."""
+    result = db.delete_shopping_item(item_id)
+    return JSONResponse(content=result)
+
+
 # ─── Tasks API ──────────────────────────────────────────────────────────────
 
 @app.get("/api/tasks/{user_id}")
@@ -383,6 +390,31 @@ async def add_user_event(user_id: str, request: Request):
     return JSONResponse(content=result)
 
 
+@app.delete("/api/events/{event_id}")
+async def delete_user_event(event_id: str):
+    """Delete a calendar event."""
+    conn = db.get_db()
+    conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+    conn.commit()
+    conn.close()
+    return JSONResponse(content={"status": "deleted"})
+
+
+@app.put("/api/auth/me")
+async def update_profile(request: Request):
+    """Update user profile/preferences."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = auth.split(" ")[1]
+    payload = db.verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    body = await request.json()
+    db.update_user_preferences(payload["sub"], body)
+    return JSONResponse(content={"status": "updated"})
+
+
 # ─── Activity Log API ──────────────────────────────────────────────────────
 
 @app.get("/api/activity/{user_id}")
@@ -392,7 +424,48 @@ async def get_user_activity(user_id: str, limit: int = 20):
     return JSONResponse(content={"activities": log, "total": len(log)})
 
 
+# ─── Orders / Tracking API ──────────────────────────────────────────────────
+
+@app.get("/api/orders/{user_id}")
+async def get_user_orders(user_id: str):
+    """Get user's Amazon orders for tracking."""
+    orders = db.get_orders(user_id)
+    return JSONResponse(content={"orders": orders, "total": len(orders)})
+
+
+# ─── Complaints API ─────────────────────────────────────────────────────────
+
+@app.get("/api/complaints/{user_id}")
+async def get_user_complaints(user_id: str):
+    """Get complaints for a user."""
+    complaints = db.get_complaints(user_id)
+    return JSONResponse(content={"complaints": complaints, "total": len(complaints)})
+
+@app.post("/api/complaints/{user_id}")
+async def file_complaint(user_id: str, request: Request):
+    """File a new complaint."""
+    body = await request.json()
+    result = db.add_complaint(user_id, body)
+    return JSONResponse(content=result)
+
+
 # ─── Admin / Maintenance Endpoints ──────────────────────────────────────────
+
+@app.get("/api/admin/complaints")
+async def get_all_complaints():
+    """Admin dashboard: get all complaints."""
+    # In a real app, this would be protected by an admin token
+    complaints = db.get_complaints()
+    return JSONResponse(content={"complaints": complaints, "total": len(complaints)})
+
+@app.put("/api/admin/complaints/{complaint_id}/resolve")
+async def admin_resolve_complaint(complaint_id: str, request: Request):
+    """Admin dashboard: resolve a complaint."""
+    body = await request.json()
+    resolution = body.get("resolution", "Resolved by Admin")
+    result = db.resolve_complaint(complaint_id, resolution)
+    return JSONResponse(content=result)
+
 
 @app.post("/api/users/{user_id}/reset")
 async def reset_user_data(user_id: str):
@@ -405,6 +478,8 @@ async def reset_user_data(user_id: str):
         cursor.execute("DELETE FROM shopping_items WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM fitness_entries WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM activity_log WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM orders WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM complaints WHERE user_id = ?", (user_id,))
         conn.commit()
     finally:
         conn.close()
@@ -435,42 +510,79 @@ async def delete_user_account(user_id: str):
 import urllib.parse
 
 @app.get("/api/amazon/search")
-async def amazon_product_search(q: str = ""):
-    """Simulated Amazon Product Search — returns realistic product data."""
-    # Create search urls dynamically instead of using DP links to prevent 404s
+async def amazon_product_search(q: str = "", category: str = ""):
+    """Simulated Amazon Product Search — returns realistic product data with live Amazon links."""
     products = [
-        {"asin": "B07QS7GYPF", "title": "Tide PODS Laundry Detergent Soap Pods, 42ct",
-         "price": 15.99, "rating": 4.7, "reviews": 128453, "category": "Household",
-         "image": "https://m.media-amazon.com/images/I/71VU5LMQL3L._AC_SL1500_.jpg",
-         "prime": True},
-        {"asin": "B07NQDSM45", "title": "Oatly Original Oat Milk, 32 fl oz",
-         "price": 5.49, "rating": 4.5, "reviews": 34821, "category": "Grocery",
-         "image": "https://m.media-amazon.com/images/I/61FZ09Q4JwL._SL1500_.jpg",
-         "prime": True},
-        {"asin": "B09JQ7J5Q5", "title": "Samsung Galaxy Buds2 Pro Wireless Earbuds",
-         "price": 149.99, "rating": 4.4, "reviews": 15678, "category": "Electronics",
-         "image": "https://m.media-amazon.com/images/I/51cVeGfdkHL._AC_SL1500_.jpg",
-         "prime": True},
-        {"asin": "B07K3HLBZ1", "title": "RXBAR Protein Bars, Variety Pack, 12 Count",
+        # Grocery
+        {"asin": "B07NQDSM45", "title": "Oatly Oat Milk Original, 32 fl oz (Pack of 6)",
+         "price": 32.99, "rating": 4.5, "reviews": 34821, "category": "Grocery",
+         "image": "https://m.media-amazon.com/images/I/71VBwnLRfPL._SL1500_.jpg", "prime": True,
+         "badge": "Best Seller"},
+        {"asin": "B07K3HLBZ1", "title": "RXBAR Protein Bars Variety Pack, 12 Count",
          "price": 24.99, "rating": 4.6, "reviews": 45213, "category": "Grocery",
-         "image": "https://m.media-amazon.com/images/I/81Y7nVGi0QL._SL1500_.jpg",
-         "prime": True},
+         "image": "https://m.media-amazon.com/images/I/81Y7nVGi0QL._SL1500_.jpg", "prime": True,
+         "badge": "Amazon's Choice"},
+        {"asin": "B077ZJ3MQB", "title": "Nescafé Gold Blend Instant Coffee, 200g",
+         "price": 14.99, "rating": 4.7, "reviews": 89234, "category": "Grocery",
+         "image": "https://m.media-amazon.com/images/I/71nxWEQdaEL._SL1500_.jpg", "prime": True,
+         "badge": None},
+        # Electronics
         {"asin": "B0B5F54Z3Q", "title": "Amazon Echo Dot (5th Gen) Smart Speaker with Alexa",
          "price": 49.99, "rating": 4.7, "reviews": 298456, "category": "Electronics",
-         "image": "https://m.media-amazon.com/images/I/71xoR4A6q-L._AC_SL1000_.jpg",
-         "prime": True},
+         "image": "https://m.media-amazon.com/images/I/71xoR4A6q-L._AC_SL1000_.jpg", "prime": True,
+         "badge": "Best Seller"},
+        {"asin": "B09JQ7J5Q5", "title": "Samsung Galaxy Buds2 Pro Wireless Earbuds, 3D Audio",
+         "price": 149.99, "rating": 4.4, "reviews": 15678, "category": "Electronics",
+         "image": "https://m.media-amazon.com/images/I/51cVeGfdkHL._AC_SL1500_.jpg", "prime": True,
+         "badge": None},
+        {"asin": "B08C1W5N87", "title": "Anker 65W Fast Charger, USB C Charger",
+         "price": 19.99, "rating": 4.8, "reviews": 67432, "category": "Electronics",
+         "image": "https://m.media-amazon.com/images/I/51YIkFNNs5L._AC_SL1500_.jpg", "prime": True,
+         "badge": "Amazon's Choice"},
+        # Household
+        {"asin": "B07QS7GYPF", "title": "Tide PODS 3-in-1 HE Turbo Laundry Detergent, 42 Count",
+         "price": 15.99, "rating": 4.7, "reviews": 128453, "category": "Household",
+         "image": "https://m.media-amazon.com/images/I/71VU5LMQL3L._AC_SL1500_.jpg", "prime": True,
+         "badge": "Best Seller"},
+        {"asin": "B081VH5J1X", "title": "Bounty Select-A-Size Paper Towels, 12 Double Rolls",
+         "price": 29.99, "rating": 4.6, "reviews": 213421, "category": "Household",
+         "image": "https://m.media-amazon.com/images/I/81mZmQqOdJL._SL1500_.jpg", "prime": True,
+         "badge": None},
+        # Health
+        {"asin": "B001GCU6F2", "title": "Garden of Life Vitamin Code Raw D3, 2000 IU, 60 Capsules",
+         "price": 19.99, "rating": 4.5, "reviews": 28743, "category": "Health",
+         "image": "https://m.media-amazon.com/images/I/71m0wA1BWKL._SL1500_.jpg", "prime": True,
+         "badge": None},
+        {"asin": "B07D9N5PGM", "title": "Optimum Nutrition Gold Standard 100% Whey Protein, Vanilla, 5 lb",
+         "price": 69.99, "rating": 4.7, "reviews": 184321, "category": "Health",
+         "image": "https://m.media-amazon.com/images/I/716bRiXRtaL._SL1500_.jpg", "prime": True,
+         "badge": "Best Seller"},
+        # Books
+        {"asin": "1984740965", "title": "Atomic Habits by James Clear — Paperback",
+         "price": 13.79, "rating": 4.8, "reviews": 534219, "category": "Books",
+         "image": "https://m.media-amazon.com/images/I/81bGKUa1e0L._SL1500_.jpg", "prime": True,
+         "badge": "Best Seller"},
+        {"asin": "0593185684", "title": "The Psychology of Money by Morgan Housel",
+         "price": 12.99, "rating": 4.7, "reviews": 298431, "category": "Books",
+         "image": "https://m.media-amazon.com/images/I/71g2ednj0JL._SL1500_.jpg", "prime": True,
+         "badge": None},
     ]
 
     for p in products:
-        # Use a search link instead of a direct product link to avoid 404 pages during tests
-        p["url"] = f"https://www.amazon.com/s?k={urllib.parse.quote(p['title'])}"
+        # Live Amazon search link
+        p["url"] = f"https://www.amazon.com/s?k={urllib.parse.quote(p['title'])}&tag=lifesync-20"
 
+    # Category filter
+    if category:
+        products = [p for p in products if p["category"].lower() == category.lower()]
+
+    # Search filter
     if q:
         q_lower = q.lower()
         filtered = [p for p in products if q_lower in p["title"].lower() or q_lower in p["category"].lower()]
-        return JSONResponse(content={"products": filtered or products[:3], "query": q})
+        return JSONResponse(content={"products": filtered or products[:4], "query": q, "total": len(filtered or products[:4])})
 
-    return JSONResponse(content={"products": products, "query": q})
+    return JSONResponse(content={"products": products[:8], "query": q, "total": len(products)})
 
 
 # ─── Main ───────────────────────────────────────────────────────────────────

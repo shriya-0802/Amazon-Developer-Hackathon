@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeSync — Set Up Your AI Assistant</title>
+    <meta name="description" content="Personalize your LifeSync AI assistant. Add your events, preferences, and let LifeSync proactively manage your life like Alexa.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --amazon-navy: #232F3E;
+            --amazon-navy-deep: #131A22;
+            --amazon-orange: #FF9900;
+            --amazon-orange-hover: #E88B00;
+            --amazon-orange-light: #FEBD69;
+            --amazon-green: #067D68;
+            --bg-primary: #0B0E13;
+            --bg-card: #141920;
+            --bg-elevated: #1C2330;
+            --bg-input: #1A1E23;
+            --text-primary: #E8EAED;
+            --text-secondary: #9AA0A6;
+            --text-muted: #6B7280;
+            --border-subtle: rgba(255,255,255,0.07);
+            --border-medium: rgba(255,255,255,0.12);
+            --glow-orange: rgba(255,153,0,0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            background-image:
+                radial-gradient(ellipse at 10% 0%, rgba(255,153,0,0.07) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 100%, rgba(20,110,180,0.06) 0%, transparent 50%);
+        }
+
+        /* ── Top Bar ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 32px;
+            background: rgba(19,26,34,0.95);
+            border-bottom: 1px solid var(--border-subtle);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .topbar-brand { display: flex; align-items: center; gap: 10px; }
+        .topbar-brand h1 { font-size: 20px; font-weight: 700; color: #fff; }
+        .topbar-brand .badge {
+            font-size: 9px; font-weight: 700; letter-spacing: 1px;
+            color: var(--amazon-orange);
+            background: rgba(255,153,0,0.12);
+            padding: 3px 8px; border-radius: 4px;
+            border: 1px solid rgba(255,153,0,0.25);
+        }
+        .step-indicators {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--border-medium);
+            transition: all 0.3s;
+        }
+        .step-dot.active {
+            background: var(--amazon-orange);
+            box-shadow: 0 0 8px rgba(255,153,0,0.5);
+            width: 24px; border-radius: 4px;
+        }
+        .step-dot.done { background: var(--amazon-green); }
+
+        /* ── Main Layout ── */
+        .setup-container {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        /* ── Step Header ── */
+        .step-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .step-icon {
+            width: 72px; height: 72px;
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, rgba(255,153,0,0.2), rgba(255,102,0,0.1));
+            border: 1px solid rgba(255,153,0,0.2);
+            box-shadow: 0 0 30px rgba(255,153,0,0.1);
+        }
+        .step-header h2 {
+            font-size: 28px; font-weight: 800;
+            background: linear-gradient(135deg, #fff, #E8EAED);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .step-header p {
+            font-size: 15px; color: var(--text-secondary);
+            max-width: 500px; margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* ── Steps ── */
+        .step-panel { display: none; }
+        .step-panel.active { display: block; }
+
+        /* ── Cards ── */
+        .setup-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 15px; font-weight: 700;
+            color: var(--amazon-orange);
+            margin-bottom: 20px;
+        }
+        .card-title i { font-size: 16px; }
+
+        /* ── Form Groups ── */
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 11px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: var(--text-muted); }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--amazon-orange);
+            box-shadow: 0 0 0 2px rgba(255,153,0,0.12);
+        }
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239AA0A6' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+        .form-group select option { background: var(--bg-card); }
+        .form-group textarea { resize: vertical; }
+
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        /* ── Calendar ── */
+        .calendar-wrapper {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .cal-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px;
+            background: rgba(255,153,0,0.06);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .cal-nav h4 { font-size: 16px; font-weight: 700; }
+        .cal-nav-btn {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-medium);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .cal-nav-btn:hover { background: rgba(255,153,0,0.1); color: var(--amazon-orange); border-color: rgba(255,153,0,0.3); }
+        .cal-weekdays {
+            display: grid; grid-template-columns: repeat(7, 1fr);
+            padding: 10px 12px 4px;
+        }
+        .cal-weekdays div {
+            text-align: center;
+            font-size: 11px; font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .cal-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            padding: 4px 12px 12px;
+        }
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.15s;
+            position: relative;
+        }
+        .cal-day:hover { background: rgba(255,153,0,0.1); color: var(--amazon-orange); }
+        .cal-day.other-month { color: var(--text-muted); opacity: 0.4; cursor: default; }
+        .cal-day.other-month:hover { background: none; color: var(--text-muted); }
+        .cal-day.today {
+            background: rgba(255,153,0,0.15);
+            color: var(--amazon-orange);
+            font-weight: 700;
+        }
+        .cal-day.selected {
+            background: var(--amazon-orange);
+            color: #000;
+            font-weight: 700;
+        }
+        .cal-day.has-events::after {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--amazon-orange);
+        }
+        .cal-day.selected.has-events::after { background: #000; }
+        .cal-day.today.has-events::after { background: var(--amazon-orange); }
+
+        /* ── Events List ── */
+        .events-section {
+            margin-top: 20px;
+        }
+        .events-section h5 {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .events-section h5::after {
+            content: '';
+            flex: 1; height: 1px;
+            background: var(--border-subtle);
+        }
+        .event-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--amazon-orange);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        .event-chip-icon { font-size: 18px; }
+        .event-chip-body { flex: 1; }
+        .event-chip-body strong { font-size: 13px; display: block; }
+        .event-chip-body span { font-size: 11px; color: var(--text-muted); }
+        .event-chip-del {
+            background: none; border: none;
+            color: var(--text-muted);
+            cursor: pointer; font-size: 13px;
+            padding: 4px 6px; border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .event-chip-del:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
+
+        /* ── Add Event Form ── */
+        .add-event-card {
+            background: rgba(255,153,0,0.04);
+            border: 1px dashed rgba(255,153,0,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .add-event-card h5 {
+            font-size: 14px; font-weight: 700;
+            color: var(--amazon-orange);
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ── Mood Selector ── */
+        .mood-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 10px; margin-bottom: 16px;
+        }
+        .mood-btn {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 6px;
+            padding: 14px 8px;
+            background: var(--bg-input);
+            border: 2px solid var(--border-medium);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .mood-btn .emoji { font-size: 28px; }
+        .mood-btn .label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+        .mood-btn:hover { border-color: rgba(255,153,0,0.4); background: rgba(255,153,0,0.06); }
+        .mood-btn.selected {
+            border-color: var(--amazon-orange);
+            background: rgba(255,153,0,0.1);
+            box-shadow: 0 0 12px rgba(255,153,0,0.15);
+        }
+        .mood-btn.selected .label { color: var(--amazon-orange); }
+
+        /* ── Interest Tags ── */
+        .tags-container {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            margin-bottom: 16px;
+        }
+        .interest-tag {
+            padding: 8px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: 24px;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+            color: var(--text-secondary);
+        }
+        .interest-tag:hover { border-color: rgba(255,153,0,0.4); color: var(--amazon-orange); }
+        .interest-tag.selected {
+            background: rgba(255,153,0,0.12);
+            border-color: var(--amazon-orange);
+            color: var(--amazon-orange);
+        }
+
+        /* ── Reminder Preferences ── */
+        .reminder-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .reminder-option {
+            padding: 16px;
+            background: var(--bg-input);
+            border: 2px solid var(--border-medium);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .reminder-option:hover { border-color: rgba(255,153,0,0.4); }
+        .reminder-option.selected {
+            border-color: var(--amazon-orange);
+            background: rgba(255,153,0,0.07);
+        }
+        .reminder-option-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            background: rgba(255,153,0,0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .reminder-option-text strong { display: block; font-size: 13px; }
+        .reminder-option-text span { font-size: 11px; color: var(--text-muted); }
+
+        /* ── Toggle ── */
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .toggle-row:last-child { border-bottom: none; }
+        .toggle-row-left strong { display: block; font-size: 14px; font-weight: 600; }
+        .toggle-row-left span { font-size: 12px; color: var(--text-muted); }
+        .toggle-switch { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-input);
+            border: 1px solid var(--border-medium);
+            border-radius: 13px;
+            transition: all 0.3s;
+        }
+        .toggle-slider::before {
+            position: absolute;
+            content: "";
+            width: 18px; height: 18px;
+            left: 3px; bottom: 3px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--amazon-orange); border-color: var(--amazon-orange); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); background: #000; }
+
+        /* ── Navigation ── */
+        .step-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 32px;
+            gap: 12px;
+        }
+        .btn-back {
+            padding: 13px 28px;
+            background: transparent;
+            border: 1px solid var(--border-medium);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 14px; font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-back:hover { border-color: var(--amazon-orange); color: var(--amazon-orange); }
+        .btn-next {
+            flex: 1; max-width: 240px;
+            padding: 14px 32px;
+            background: var(--amazon-orange);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px; font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-next:hover {
+            background: var(--amazon-orange-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(255,153,0,0.3);
+        }
+        .btn-skip {
+            background: none; border: none;
+            color: var(--text-muted); font-size: 13px;
+            cursor: pointer; font-family: inherit;
+            padding: 6px 12px;
+            transition: color 0.2s;
+        }
+        .btn-skip:hover { color: var(--text-secondary); }
+
+        /* ── Success Screen ── */
+        .success-screen {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .success-icon {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--amazon-orange), #FF6600);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 28px;
+            font-size: 44px;
+            box-shadow: 0 0 60px rgba(255,153,0,0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(255,153,0,0.3); }
+            50% { box-shadow: 0 0 60px rgba(255,153,0,0.5); }
+        }
+        .success-screen h2 {
+            font-size: 32px; font-weight: 800;
+            background: linear-gradient(135deg, #FF9900, #FEBD69);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        .success-screen p { font-size: 16px; color: var(--text-secondary); max-width: 480px; margin: 0 auto 32px; line-height: 1.6; }
+        .feature-chips {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            justify-content: center; margin-bottom: 36px;
+        }
+        .feature-chip {
+            padding: 8px 16px;
+            background: rgba(255,153,0,0.1);
+            border: 1px solid rgba(255,153,0,0.2);
+            border-radius: 24px;
+            font-size: 13px; font-weight: 500;
+            color: var(--amazon-orange-light);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-launch {
+            padding: 16px 48px;
+            background: linear-gradient(135deg, var(--amazon-orange), #FF6600);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px; font-weight: 800;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(255,153,0,0.3);
+        }
+        .btn-launch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(255,153,0,0.4);
+        }
+
+        /* ── Spinner ── */
+        .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid transparent;
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .setup-container { padding: 24px 16px 60px; }
+            .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+            .reminder-grid { grid-template-columns: 1fr; }
+            .step-header h2 { font-size: 22px; }
+            .mood-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-brand">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect width="28" height="28" rx="6" fill="#FF9900"/>
+                <path d="M8 14L12 18L20 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h1>LifeSync</h1>
+            <span class="badge">SETUP WIZARD</span>
+        </div>
+        <div class="step-indicators" id="step-indicators">
+            <div class="step-dot active" id="dot-0"></div>
+            <div class="step-dot" id="dot-1"></div>
+            <div class="step-dot" id="dot-2"></div>
+            <div class="step-dot" id="dot-3"></div>
+            <div class="step-dot" id="dot-4"></div>
+        </div>
+        <button class="btn-skip" onclick="skipSetup()">Skip Setup →</button>
+    </header>
+
+    <div class="setup-container">
+
+        <!-- ════ STEP 0: WELCOME ════ -->
+        <div class="step-panel active" id="step-0">
+            <div class="step-header">
+                <div class="step-icon">🚀</div>
+                <h2>Welcome to LifeSync!</h2>
+                <p>Let's set up your AI-powered personal assistant in 4 quick steps. You can always change these later.</p>
+            </div>
+
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-solid fa-user"></i> Your Profile</div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" id="ob-name" placeholder="e.g. Shriya Mohanty" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Location</label>
+                        <input type="text" id="ob-location" placeholder="e.g. Bhubaneswar, India">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>What describes you best?</label>
+                    <select id="ob-role-type">
+                        <option value="professional">👔 Working Professional</option>
+                        <option value="student">🎓 Student</option>
+                        <option value="entrepreneur">💼 Entrepreneur / Freelancer</option>
+                        <option value="homemaker">🏠 Homemaker</option>
+                        <option value="other">✨ Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Timezone</label>
+                    <select id="ob-timezone">
+                        <option value="Asia/Kolkata" selected>🇮🇳 India (IST, UTC+5:30)</option>
+                        <option value="America/New_York">🇺🇸 Eastern (EST)</option>
+                        <option value="America/Los_Angeles">🇺🇸 Pacific (PST)</option>
+                        <option value="Europe/London">🇬🇧 London (GMT)</option>
+                        <option value="Asia/Dubai">🇦🇪 Dubai (GST)</option>
+                        <option value="Asia/Singapore">🇸🇬 Singapore (SGT)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-solid fa-face-smile"></i> How are you feeling today?</div>
+                <div class="mood-grid" id="ob-mood-grid">
+                    <button class="mood-btn" data-mood="great" onclick="selectMood('great')">
+                        <span class="emoji">😄</span><span class="label">Great</span>
+                    </button>
+                    <button class="mood-btn" data-mood="good" onclick="selectMood('good')">
+                        <span class="emoji">🙂</span><span class="label">Good</span>
+                    </button>
+                    <button class="mood-btn" data-mood="neutral" onclick="selectMood('neutral')">
+                        <span class="emoji">😐</span><span class="label">Neutral</span>
+                    </button>
+                    <button class="mood-btn" data-mood="low" onclick="selectMood('low')">
+                        <span class="emoji">😔</span><span class="label">Low</span>
+                    </button>
+                    <button class="mood-btn" data-mood="stressed" onclick="selectMood('stressed')">
+                        <span class="emoji">😰</span><span class="label">Stressed</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <span></span>
+                <button class="btn-next" onclick="nextStep()">
+                    Next: Add Your Events <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ════ STEP 1: CALENDAR EVENTS ════ -->
+        <div class="step-panel" id="step-1">
+            <div class="step-header">
+                <div class="step-icon">📅</div>
+                <h2>Add Your Events</h2>
+                <p>Tell LifeSync about your upcoming meetings, appointments, and important dates. I'll remind you proactively — just like Alexa!</p>
+            </div>
+
+            <!-- Calendar -->
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Pick a Date & Add Events</div>
+                <div class="calendar-wrapper">
+                    <div class="cal-nav">
+                        <button class="cal-nav-btn" onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h4 id="cal-title">October 2026</h4>
+                        <button class="cal-nav-btn" onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="cal-weekdays">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div class="cal-grid" id="cal-grid"></div>
+                </div>
+
+                <!-- Add Event Form -->
+                <div class="add-event-card">
+                    <h5><i class="fa-solid fa-plus-circle"></i> Add Event for <span id="selected-date-label">Today</span></h5>
+                    <div class="form-group">
+                        <label>Event Name *</label>
+                        <input type="text" id="ev-title" placeholder="e.g. Doctor's Appointment, Mom's Birthday, Team Meeting">
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Date & Time</label>
+                            <input type="datetime-local" id="ev-datetime">
+                        </div>
+                        <div class="form-group">
+                            <label>Event Type</label>
+                            <select id="ev-type">
+                                <option value="meeting">🏢 Meeting</option>
+                                <option value="personal">🏠 Personal</option>
+                                <option value="health">💊 Health</option>
+                                <option value="social">🎉 Social</option>
+                                <option value="deadline">⏰ Deadline</option>
+                                <option value="shopping">🛒 Shopping Trip</option>
+                                <option value="birthday">🎂 Birthday</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes / Description (Optional)</label>
+                        <textarea id="ev-desc" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+                            <input type="checkbox" id="ev-alexa-remind" checked style="accent-color: var(--amazon-orange); width:16px; height:16px;">
+                            <i class="fa-solid fa-bell" style="color: var(--amazon-orange);"></i>
+                            Enable Alexa-style voice reminder
+                        </label>
+                        <button style="padding: 10px 20px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit;" onclick="addEventToList()">
+                            <i class="fa-solid fa-plus"></i> Add Event
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Events List -->
+                <div class="events-section" id="events-section">
+                    <h5 id="events-section-title">Events Added</h5>
+                    <div id="events-list">
+                        <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 16px;">No events added yet. Pick a date and add your first event!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <button class="btn-back" onclick="prevStep()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <button class="btn-skip" onclick="nextStep()">Skip</button>
+                <button class="btn-next" onclick="saveEventsAndNext()">
+                    Save & Continue <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ════ STEP 2: INTERESTS & SHOPPING ════ -->
+        <div class="step-panel" id="step-2">
+            <div class="step-header">
+                <div class="step-icon">🛒</div>
+                <h2>Interests & Shopping Preferences</h2>
+                <p>Help LifeSync learn what you care about. This powers smart Amazon shopping suggestions and personalized AI responses.</p>
+            </div>
+
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-solid fa-heart"></i> Your Interests</div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Select all that apply — this helps LifeSync give better suggestions</p>
+                <div class="tags-container" id="interests-grid">
+                    <div class="interest-tag" data-interest="fitness" onclick="toggleInterest(this)">🏋️ Fitness</div>
+                    <div class="interest-tag" data-interest="cooking" onclick="toggleInterest(this)">👨‍🍳 Cooking</div>
+                    <div class="interest-tag" data-interest="tech" onclick="toggleInterest(this)">💻 Technology</div>
+                    <div class="interest-tag" data-interest="reading" onclick="toggleInterest(this)">📚 Reading</div>
+                    <div class="interest-tag" data-interest="travel" onclick="toggleInterest(this)">✈️ Travel</div>
+                    <div class="interest-tag" data-interest="music" onclick="toggleInterest(this)">🎵 Music</div>
+                    <div class="interest-tag" data-interest="gaming" onclick="toggleInterest(this)">🎮 Gaming</div>
+                    <div class="interest-tag" data-interest="fashion" onclick="toggleInterest(this)">👗 Fashion</div>
+                    <div class="interest-tag" data-interest="health" onclick="toggleInterest(this)">🏥 Health</div>
+                    <div class="interest-tag" data-interest="finance" onclick="toggleInterest(this)">💰 Finance</div>
+                    <div class="interest-tag" data-interest="photography" onclick="toggleInterest(this)">📸 Photography</div>
+                    <div class="interest-tag" data-interest="sports" onclick="toggleInterest(this)">⚽ Sports</div>
+                </div>
+            </div>
+
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-brands fa-amazon"></i> Amazon Shopping Preferences</div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Preferred Shopping Categories</label>
+                        <select id="shop-pref">
+                            <option value="all">🛍️ Everything</option>
+                            <option value="grocery">🥗 Grocery & Food</option>
+                            <option value="electronics">📱 Electronics</option>
+                            <option value="home">🏠 Home & Kitchen</option>
+                            <option value="health">💊 Health & Beauty</option>
+                            <option value="books">📚 Books & Education</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Budget Preference</label>
+                        <select id="shop-budget">
+                            <option value="budget">💵 Budget-Friendly (Under $25)</option>
+                            <option value="mid" selected>💳 Mid-Range ($25-$100)</option>
+                            <option value="premium">💎 Premium ($100+)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Items to Track / Reorder</label>
+                    <input type="text" id="shop-items" placeholder="e.g. protein bars, coffee, milk, shampoo (comma separated)">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(255,153,0,0.05); border-radius: 10px; border: 1px solid rgba(255,153,0,0.15);">
+                    <i class="fa-brands fa-amazon" style="color: var(--amazon-orange); font-size: 20px;"></i>
+                    <span style="font-size: 13px; color: var(--text-secondary);">LifeSync will suggest Amazon products based on your needs, previous orders, and patterns — like a smart shopping assistant!</span>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <button class="btn-back" onclick="prevStep()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <button class="btn-skip" onclick="nextStep()">Skip</button>
+                <button class="btn-next" onclick="nextStep()">
+                    Next: Reminders <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ════ STEP 3: REMINDER PREFERENCES ════ -->
+        <div class="step-panel" id="step-3">
+            <div class="step-header">
+                <div class="step-icon">🔔</div>
+                <h2>Alexa-Style Reminder Settings</h2>
+                <p>Choose how LifeSync should remind you of upcoming events and tasks. We'll proactively alert you — just like Alexa!</p>
+            </div>
+
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-solid fa-bell"></i> Reminder Channels</div>
+                <div class="reminder-grid">
+                    <div class="reminder-option selected" id="rem-voice" onclick="toggleReminder('voice')">
+                        <div class="reminder-option-icon">🔊</div>
+                        <div class="reminder-option-text">
+                            <strong>Voice Alert</strong>
+                            <span>Browser text-to-speech (Alexa-style)</span>
+                        </div>
+                    </div>
+                    <div class="reminder-option selected" id="rem-toast" onclick="toggleReminder('toast')">
+                        <div class="reminder-option-icon">🔔</div>
+                        <div class="reminder-option-text">
+                            <strong>Toast Notification</strong>
+                            <span>On-screen popup alerts</span>
+                        </div>
+                    </div>
+                    <div class="reminder-option" id="rem-browser" onclick="toggleReminder('browser')">
+                        <div class="reminder-option-icon">🖥️</div>
+                        <div class="reminder-option-text">
+                            <strong>Browser Notification</strong>
+                            <span>Even when tab is in background</span>
+                        </div>
+                    </div>
+                    <div class="reminder-option" id="rem-chat" onclick="toggleReminder('chat')">
+                        <div class="reminder-option-icon">💬</div>
+                        <div class="reminder-option-text">
+                            <strong>AI Chat Message</strong>
+                            <span>In-app message in assistant</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-card">
+                <div class="card-title"><i class="fa-solid fa-clock"></i> Reminder Timing</div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Remind me before events</label>
+                        <select id="rem-before">
+                            <option value="5">5 minutes before</option>
+                            <option value="10">10 minutes before</option>
+                            <option value="15" selected>15 minutes before</option>
+                            <option value="30">30 minutes before</option>
+                            <option value="60">1 hour before</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Daily Summary Time</label>
+                        <input type="time" id="rem-daily-time" value="07:30">
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-row-left">
+                        <strong>Morning Briefing</strong>
+                        <span>Daily AI summary at your chosen time</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="tog-morning" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-row-left">
+                        <strong>Smart Reorder Alerts</strong>
+                        <span>AI detects when to reorder Amazon items</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="tog-reorder" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-row-left">
+                        <strong>Fitness Nudges</strong>
+                        <span>Step reminders if behind on daily goal</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="tog-fitness" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-row-left">
+                        <strong>Mood Check-in</strong>
+                        <span>Daily mood tracking prompt</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="tog-mood" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <button class="btn-back" onclick="prevStep()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <button class="btn-next" onclick="finishSetup()" id="finish-btn">
+                    <i class="fa-solid fa-bolt"></i> Activate LifeSync!
+                </button>
+            </div>
+        </div>
+
+        <!-- ════ STEP 4: SUCCESS ════ -->
+        <div class="step-panel" id="step-4">
+            <div class="success-screen">
+                <div class="success-icon">⚡</div>
+                <h2>LifeSync is Ready!</h2>
+                <p id="success-msg">Your AI personal assistant has been configured. I'll proactively remind you of upcoming events, suggest Amazon products, and help you stay on top of everything.</p>
+                <div class="feature-chips">
+                    <div class="feature-chip"><i class="fa-solid fa-calendar-check"></i> <span id="events-count">0</span> events scheduled</div>
+                    <div class="feature-chip"><i class="fa-solid fa-bell"></i> Alexa+ Reminders ON</div>
+                    <div class="feature-chip"><i class="fa-brands fa-amazon"></i> Smart Shopping Ready</div>
+                    <div class="feature-chip"><i class="fa-solid fa-brain"></i> AI Memory Active</div>
+                </div>
+                <button class="btn-launch" onclick="launchApp()">
+                    <i class="fa-solid fa-rocket"></i> Launch LifeSync Dashboard
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        // Auth guard
+        const storedUser = localStorage.getItem('lifesync_user');
+        const authToken = localStorage.getItem('lifesync_token');
+        if (!storedUser || !authToken) {
+            window.location.href = '/auth.html';
+        }
+        const currentUser = storedUser ? JSON.parse(storedUser) : {};
+        const userId = currentUser.user_id || 'default';
+
+        // Pre-fill name
+        document.getElementById('ob-name').value = currentUser.name || '';
+
+        // ── State ──
+        let currentStep = 0;
+        const TOTAL_STEPS = 5;
+        let selectedMoodVal = null;
+        let addedEvents = [];
+        let selectedInterests = new Set();
+        let reminderChannels = new Set(['voice', 'toast']);
+
+        // Calendar state
+        let calMonth = new Date().getMonth();
+        let calYear = new Date().getFullYear();
+        let calSelectedDate = null;
+
+        // ── Step Navigation ──
+        function showStep(n) {
+            document.querySelectorAll('.step-panel').forEach((p, i) => {
+                p.classList.toggle('active', i === n);
+            });
+            document.querySelectorAll('.step-dot').forEach((d, i) => {
+                d.classList.remove('active', 'done');
+                if (i < n) d.classList.add('done');
+                else if (i === n) d.classList.add('active');
+            });
+            window.scrollTo(0, 0);
+        }
+
+        function nextStep() {
+            if (currentStep < TOTAL_STEPS - 1) {
+                currentStep++;
+                showStep(currentStep);
+                if (currentStep === 1) initCalendar();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+        function skipSetup() {
+            localStorage.removeItem('lifesync_is_new_user');
+            window.location.href = '/';
+        }
+
+        // ── Mood ──
+        function selectMood(mood) {
+            selectedMoodVal = mood;
+            document.querySelectorAll('.mood-btn').forEach(b => {
+                b.classList.toggle('selected', b.getAttribute('data-mood') === mood);
+            });
+        }
+
+        // ── Interest Tags ──
+        function toggleInterest(el) {
+            const key = el.getAttribute('data-interest');
+            if (selectedInterests.has(key)) {
+                selectedInterests.delete(key);
+                el.classList.remove('selected');
+            } else {
+                selectedInterests.add(key);
+                el.classList.add('selected');
+            }
+        }
+
+        // ── Reminder Channels ──
+        function toggleReminder(ch) {
+            const el = document.getElementById('rem-' + ch);
+            if (reminderChannels.has(ch)) {
+                reminderChannels.delete(ch);
+                el.classList.remove('selected');
+            } else {
+                reminderChannels.add(ch);
+                el.classList.add('selected');
+            }
+        }
+
+        // ── Calendar ──
+        function initCalendar() {
+            renderCalendar();
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            selectDate(todayStr);
+        }
+
+        function changeMonth(dir) {
+            calMonth += dir;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            document.getElementById('cal-title').textContent = `${months[calMonth]} ${calYear}`;
+
+            const firstDay = new Date(calYear, calMonth, 1).getDay();
+            const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+            const prevDays = new Date(calYear, calMonth, 0).getDate();
+            const today = new Date();
+
+            let html = '';
+
+            for (let i = firstDay - 1; i >= 0; i--) {
+                html += `<div class="cal-day other-month">${prevDays - i}</div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const isToday = today.getDate() === day && today.getMonth() === calMonth && today.getFullYear() === calYear;
+                const isSelected = calSelectedDate === dateStr;
+                const hasEvents = addedEvents.some(e => e.dateStr === dateStr);
+
+                let cls = 'cal-day';
+                if (isToday) cls += ' today';
+                if (isSelected) cls += ' selected';
+                if (hasEvents) cls += ' has-events';
+
+                html += `<div class="${cls}" onclick="selectDate('${dateStr}')">${day}</div>`;
+            }
+
+            const totalCells = firstDay + daysInMonth;
+            const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let i = 1; i <= remaining; i++) {
+                html += `<div class="cal-day other-month">${i}</div>`;
+            }
+
+            document.getElementById('cal-grid').innerHTML = html;
+        }
+
+        function selectDate(dateStr) {
+            calSelectedDate = dateStr;
+            renderCalendar();
+
+            const d = new Date(dateStr + 'T00:00:00');
+            document.getElementById('selected-date-label').textContent =
+                d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+            // Pre-fill datetime field
+            document.getElementById('ev-datetime').value = dateStr + 'T09:00';
+        }
+
+        // ── Add Event ──
+        function addEventToList() {
+            const title = document.getElementById('ev-title').value.trim();
+            if (!title) {
+                document.getElementById('ev-title').focus();
+                document.getElementById('ev-title').style.borderColor = '#ff6b6b';
+                setTimeout(() => document.getElementById('ev-title').style.borderColor = '', 2000);
+                return;
+            }
+
+            const datetime = document.getElementById('ev-datetime').value;
+            const type = document.getElementById('ev-type').value;
+            const desc = document.getElementById('ev-desc').value.trim();
+            const remind = document.getElementById('ev-alexa-remind').checked;
+
+            const typeIcons = { meeting:'🏢', personal:'🏠', health:'💊', social:'🎉', deadline:'⏰', shopping:'🛒', birthday:'🎂' };
+
+            const event = {
+                id: Date.now(),
+                title,
+                datetime,
+                type,
+                desc,
+                remind,
+                dateStr: datetime.split('T')[0] || calSelectedDate,
+                icon: typeIcons[type] || '📅'
+            };
+
+            addedEvents.push(event);
+            renderEventsList();
+
+            // Clear form
+            document.getElementById('ev-title').value = '';
+            document.getElementById('ev-desc').value = '';
+
+            // Re-render calendar to show dot
+            renderCalendar();
+
+            // Show success feedback
+            const btn = event.target || document.querySelector('[onclick="addEventToList()"]');
+        }
+
+        function renderEventsList() {
+            const container = document.getElementById('events-list');
+            if (addedEvents.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 16px;">No events added yet.</p>';
+                return;
+            }
+
+            const sorted = [...addedEvents].sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+            container.innerHTML = sorted.map(ev => {
+                const dt = ev.datetime ? new Date(ev.datetime) : null;
+                const timeStr = dt && !isNaN(dt) ? dt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No time set';
+                return `
+                    <div class="event-chip">
+                        <span class="event-chip-icon">${ev.icon}</span>
+                        <div class="event-chip-body">
+                            <strong>${ev.title}</strong>
+                            <span>${timeStr} ${ev.remind ? '🔔' : ''} ${ev.desc ? '· ' + ev.desc.slice(0,40) : ''}</span>
+                        </div>
+                        <button class="event-chip-del" onclick="removeEvent(${ev.id})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function removeEvent(id) {
+            addedEvents = addedEvents.filter(e => e.id !== id);
+            renderEventsList();
+            renderCalendar();
+        }
+
+        // ── Save Events & Continue ──
+        async function saveEventsAndNext() {
+            const btn = document.querySelector('#step-1 .btn-next');
+            if (addedEvents.length > 0) {
+                btn.innerHTML = '<span class="spinner"></span> Saving...';
+                btn.disabled = true;
+
+                const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+
+                for (const event of addedEvents) {
+                    try {
+                        await fetch(`${API_BASE}/events/${userId}`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({
+                                title: event.title,
+                                start_time: event.datetime || new Date().toISOString(),
+                                description: event.desc || '',
+                                event_type: event.type
+                            })
+                        });
+                    } catch (e) {
+                        console.error('Event save error:', e);
+                    }
+                }
+
+                btn.innerHTML = 'Save & Continue <i class="fa-solid fa-arrow-right"></i>';
+                btn.disabled = false;
+            }
+            nextStep();
+        }
+
+        // ── Finish Setup ──
+        async function finishSetup() {
+            const btn = document.getElementById('finish-btn');
+            btn.innerHTML = '<span class="spinner"></span> Activating...';
+            btn.disabled = true;
+
+            const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+
+            // Save shopping items
+            const shopItemsRaw = document.getElementById('shop-items').value.trim();
+            if (shopItemsRaw) {
+                const items = shopItemsRaw.split(',').map(s => s.trim()).filter(Boolean);
+                for (const item of items) {
+                    try {
+                        await fetch(`${API_BASE}/shopping/${userId}`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({ product_name: item, category: 'general', quantity: 1 })
+                        });
+                    } catch (e) { /* silent */ }
+                }
+            }
+
+            // Save mood
+            if (selectedMoodVal) {
+                const moodHistory = JSON.parse(localStorage.getItem('lifesync_mood_history') || '[]');
+                moodHistory.push({ mood: selectedMoodVal, note: 'Setup mood', timestamp: new Date().toISOString(), date: new Date().toLocaleDateString() });
+                localStorage.setItem('lifesync_mood_history', JSON.stringify(moodHistory));
+            }
+
+            // Save preferences to localStorage
+            const prefs = {
+                interests: [...selectedInterests],
+                reminderChannels: [...reminderChannels],
+                reminderBefore: document.getElementById('rem-before').value,
+                dailySummaryTime: document.getElementById('rem-daily-time').value,
+                morningBriefing: document.getElementById('tog-morning').checked,
+                smartReorder: document.getElementById('tog-reorder').checked,
+                fitnessNudges: document.getElementById('tog-fitness').checked,
+                moodCheckin: document.getElementById('tog-mood').checked,
+                shopPreference: document.getElementById('shop-pref').value,
+                shopBudget: document.getElementById('shop-budget').value,
+                timezone: document.getElementById('ob-timezone').value,
+                roleType: document.getElementById('ob-role-type').value,
+            };
+            localStorage.setItem('lifesync_prefs', JSON.stringify(prefs));
+
+            // Request browser notification permission
+            if (reminderChannels.has('browser') && 'Notification' in window) {
+                await Notification.requestPermission();
+            }
+
+            // Update success screen
+            document.getElementById('events-count').textContent = addedEvents.length;
+            if (currentUser.name) {
+                document.getElementById('success-msg').textContent =
+                    `Welcome, ${currentUser.name}! Your AI personal assistant is now configured with ${addedEvents.length} event${addedEvents.length !== 1 ? 's' : ''}, Alexa-style reminders, and Amazon shopping preferences. I'll proactively keep you on track!`;
+            }
+
+            localStorage.removeItem('lifesync_is_new_user');
+
+            // Move to success screen
+            currentStep = 4;
+            showStep(4);
+
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Activate LifeSync!';
+            btn.disabled = false;
+        }
+
+        function launchApp() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

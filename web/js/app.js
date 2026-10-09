@@ -19,6 +19,8 @@ let sessionId = userId;
 let messageCount = 0;
 let reminderInterval = null;
 let shownReminderIds = new Set();
+const userPrefs = JSON.parse(localStorage.getItem('lifesync_prefs') || '{}');
+
 
 // ── DOM Elements ────────────────────────────────────────────────────
 const chatContainer = document.getElementById('chat-container');
@@ -130,6 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
     }
+    
+    // Hide Admin tab for non-admins
+    if (currentUser.role !== 'admin') {
+        const adminTab = document.querySelector('.nav-item[data-tab="admin"]');
+        if (adminTab) adminTab.style.display = 'none';
+    }
 
     // ── Quick Action Cards ──────────────────────────────────────────
     document.querySelectorAll('.quick-action-card').forEach(card => {
@@ -170,6 +178,34 @@ document.addEventListener('DOMContentLoaded', () => {
             // Quick Notes modal
             if (tab === 'notes') {
                 openNotesModal();
+                return;
+            }
+
+            // Tasks Modal
+            if (tab === 'tasks') {
+                document.getElementById('tasks-modal').classList.remove('hidden');
+                loadTasksModal();
+                return;
+            }
+
+            // Tracking Modal
+            if (tab === 'tracking') {
+                document.getElementById('tracking-modal').classList.remove('hidden');
+                loadOrders();
+                return;
+            }
+
+            // Complaints Modal
+            if (tab === 'complaints') {
+                document.getElementById('complaints-modal').classList.remove('hidden');
+                loadComplaints();
+                return;
+            }
+
+            // Admin Dashboard Modal
+            if (tab === 'admin') {
+                document.getElementById('admin-modal').classList.remove('hidden');
+                loadAdminComplaints();
                 return;
             }
 
@@ -394,22 +430,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Voice Button ────────────────────────────────────────────────
     document.getElementById('btn-voice').addEventListener('click', () => {
-        const voiceBtn = document.getElementById('btn-voice');
-        voiceBtn.classList.add('listening');
-        messageInput.placeholder = '🎤 Listening...';
-        messageInput.disabled = true;
-        setTimeout(() => {
-            voiceBtn.classList.remove('listening');
-            messageInput.disabled = false;
-            messageInput.placeholder = 'Ask LifeSync anything...';
-            messageInput.value = 'What should I focus on today?';
-            messageInput.focus();
-        }, 2000);
+        // Already handled above in the first event listener block
     });
+
 
     // ── Attach Button ───────────────────────────────────────────────
     document.getElementById('btn-attach').addEventListener('click', () => {
-        addSystemMessage('📎 File attachment is a simulated feature for the hackathon demo.');
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '*/*';
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                addMessage({
+                    text: `📎 **Attached File:** ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+                    type: "user",
+                    cards: []
+                }, 'user');
+                
+                setTimeout(() => {
+                    addMessage({
+                        text: `I've received your file **${file.name}**. What would you like me to do with it?`,
+                        type: "general",
+                        cards: []
+                    }, 'bot');
+                }, 1000);
+            }
+        };
+        fileInput.click();
     });
 
     // ── User Menu (Logout) ──────────────────────────────────────────
@@ -507,6 +555,7 @@ function addMessage(text, role, cards = []) {
 
     let formatted = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color: var(--amazon-orange); text-decoration: underline;">$1</a>')
         .replace(/\n/g, '<br>');
     clone.querySelector('.message-bubble').innerHTML = formatted;
 
@@ -693,6 +742,15 @@ function scrollToBottom() {
 
 // ── Global Handlers ─────────────────────────────────────────────────
 window.handleCardAction = (actionValue) => {
+    if (actionValue === 'open_tracking') {
+        document.getElementById('tracking-modal').classList.remove('hidden');
+        window.loadOrders();
+        return;
+    }
+    if (actionValue.startsWith('http')) {
+        window.open(actionValue, '_blank');
+        return;
+    }
     sendMessage(`Do: ${actionValue}`);
 };
 
@@ -841,9 +899,9 @@ function initCalendarModal() {
         btn.disabled = true;
 
         try {
-            await fetch(`${API_BASE}/events/${userId}`, {
+            const res = await fetch(`${API_BASE}/events/${userId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({
                     title,
                     start_time: time || new Date().toISOString(),
@@ -851,6 +909,8 @@ function initCalendarModal() {
                     event_type: eventType
                 })
             });
+
+            const data = await res.json();
 
             // Reset form
             document.getElementById('cal-event-title').value = '';
@@ -862,15 +922,19 @@ function initCalendarModal() {
             renderCalendar();
             if (calSelectedDate) showEventsForDate(calSelectedDate);
 
-            addSystemMessage(`📅 Event added: <strong>${title}</strong>. I'll remind you when it's time — like Alexa!`);
+            // Toast confirmation
+            showAlexaToast(`✅ Event "${title}" added! I'll remind you when it's time.`);
+            addSystemMessage(`📅 Event added: <strong>${title}</strong>. Alexa+ will remind you proactively when the time approaches!`);
         } catch (err) {
             console.error('Add event error:', err);
+            addSystemMessage('⚠️ Failed to save event. Make sure the server is running.');
         }
 
         btn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Event';
         btn.disabled = false;
     });
 }
+
 
 function openCalendarModal() {
     const modal = document.getElementById('calendar-modal');
@@ -965,18 +1029,18 @@ function showEventsForDate(dateStr) {
     const dayEvents = calEvents.filter(evt => evt.start_time && evt.start_time.startsWith(dateStr));
 
     if (dayEvents.length === 0) {
-        listEl.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 16px; font-size: 13px;">No events on this day</p>';
+        listEl.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 16px; font-size: 13px;">No events on this day. Use the form below to add one!</p>';
         return;
     }
 
-    const typeIcons = { meeting: '🏢', personal: '🏠', health: '💊', social: '🎉', deadline: '⏰' };
+    const typeIcons = { meeting: '🏢', personal: '🏠', health: '💊', social: '🎉', deadline: '⏰', shopping: '🛒', birthday: '🎂' };
 
     let html = '';
     dayEvents.forEach(evt => {
         const timeStr = evt.start_time ? new Date(evt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         const icon = typeIcons[evt.event_type] || '📅';
         html += `
-            <div class="notif-item" style="border-left: 3px solid var(--amazon-orange); margin-bottom: 8px; padding: 10px; border-radius: 6px; background: rgba(255,255,255,0.03);">
+            <div class="notif-item" style="border-left: 3px solid var(--amazon-orange); margin-bottom: 8px; padding: 10px; border-radius: 6px; background: rgba(255,255,255,0.03);" id="event-${evt.id}">
                 <div class="notif-icon" style="background: var(--amazon-orange); min-width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size: 16px;">
                     ${icon}
                 </div>
@@ -985,6 +1049,9 @@ function showEventsForDate(dateStr) {
                     <p style="margin:2px 0; font-size: 12px; color: var(--text-secondary);">🕐 ${timeStr} ${evt.location ? '📍 ' + evt.location : ''}</p>
                     ${evt.description ? `<p style="margin:0; font-size: 11px; color: var(--text-muted);">${evt.description}</p>` : ''}
                 </div>
+                <button onclick="deleteCalEvent('${evt.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:4px 8px;border-radius:4px;transition:all 0.2s;" title="Delete event" onmouseover="this.style.color='#ff6b6b'" onmouseout="this.style.color='var(--text-muted)'">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
             </div>
         `;
     });
@@ -992,9 +1059,24 @@ function showEventsForDate(dateStr) {
     listEl.innerHTML = html;
 }
 
-// ══════════════════════════════════════════════════════════════════════
-//  FOCUS TIMER (POMODORO)
-// ══════════════════════════════════════════════════════════════════════
+// ── Delete Calendar Event ───────────────────────────────────────────
+window.deleteCalEvent = async function(eventId) {
+    if (!confirm('Delete this event?')) return;
+    try {
+        await fetch(`${API_BASE}/events/${eventId}`, { 
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const el = document.getElementById('event-' + eventId);
+        if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all 0.3s'; setTimeout(() => el.remove(), 300); }
+        calEvents = calEvents.filter(e => e.id !== eventId);
+        renderCalendar();
+        showAlexaToast('🗑️ Event deleted.');
+    } catch (err) {
+        console.error('Delete event error:', err);
+    }
+};
+
 
 function initFocusTimer() {
     const modal = document.getElementById('focus-timer-modal');
@@ -1109,10 +1191,20 @@ function initShoppingModal() {
         }
     });
 
-    // Category buttons
+    // Category buttons — now open Amazon.com directly AND filter products
     document.querySelectorAll('.amazon-cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            loadAmazonProducts(btn.getAttribute('data-cat'));
+            const cat = btn.getAttribute('data-cat');
+            // Highlight active category
+            document.querySelectorAll('.amazon-cat-btn').forEach(b => {
+                b.style.borderColor = 'var(--border-medium)';
+                b.style.background = 'var(--bg-input)';
+                b.style.color = 'var(--text-secondary)';
+            });
+            btn.style.borderColor = 'var(--amazon-orange)';
+            btn.style.background = 'rgba(255,153,0,0.1)';
+            btn.style.color = 'var(--amazon-orange)';
+            loadAmazonProducts('', cat);
         });
     });
 }
@@ -1124,32 +1216,39 @@ function openShoppingModal() {
     loadShoppingList();
 }
 
-async function loadAmazonProducts(query) {
+async function loadAmazonProducts(query, category = '') {
     const grid = document.getElementById('amazon-product-grid');
-    grid.innerHTML = '<div class="ctx-widget skeleton-widget" style="height:200px;"></div><div class="ctx-widget skeleton-widget" style="height:200px;"></div>';
+    grid.innerHTML = '<div class="ctx-widget skeleton-widget" style="height:200px;"></div><div class="ctx-widget skeleton-widget" style="height:200px;"></div><div class="ctx-widget skeleton-widget" style="height:200px;"></div><div class="ctx-widget skeleton-widget" style="height:200px;"></div>';
 
     try {
-        const res = await fetch(`${API_BASE}/amazon/search?q=${encodeURIComponent(query || '')}`);
+        let url = `${API_BASE}/amazon/search?q=${encodeURIComponent(query || '')}`;
+        if (category) url += `&category=${encodeURIComponent(category)}`;
+
+        const res = await fetch(url);
         const data = await res.json();
 
         if (!data.products || data.products.length === 0) {
-            grid.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 40px; grid-column: span 2;">No products found</p>';
+            grid.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 40px; grid-column: span 2;">No products found. <a href="https://www.amazon.com" target="_blank" style="color: var(--amazon-orange);">Search on Amazon →</a></p>';
             return;
         }
 
         let html = '';
         data.products.forEach(product => {
+            const badgeHtml = product.badge 
+                ? `<span style="position:absolute;top:8px;left:8px;background:${product.badge === 'Best Seller' ? '#FF9900' : '#0F5FA6'};color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:0.5px;">${product.badge}</span>` 
+                : '';
             html += `
-                <div class="amazon-product-card fade-in">
-                    <img src="${product.image}" alt="${product.title}" onerror="this.style.display='none'">
+                <div class="amazon-product-card fade-in" style="position:relative;">
+                    ${badgeHtml}
+                    <img src="${product.image}" alt="${product.title}" onerror="this.style.display='none'" loading="lazy">
                     <div class="product-title">${product.title}</div>
                     <div class="product-price">$${product.price.toFixed(2)}</div>
                     <div class="product-rating">
-                        ${'★'.repeat(Math.floor(product.rating))}${'☆'.repeat(5 - Math.floor(product.rating))} 
-                        ${product.rating} (${product.reviews.toLocaleString()} reviews)
+                        ${'\u2605'.repeat(Math.floor(product.rating))}${'\u2606'.repeat(5 - Math.floor(product.rating))} 
+                        <span style="font-size:11px;color:var(--text-muted);">${product.rating} (${product.reviews.toLocaleString()})</span>
                     </div>
                     ${product.prime ? '<span class="prime-badge">✓ prime</span>' : ''}
-                    <a href="${product.url}" target="_blank" class="amazon-buy-btn">
+                    <a href="${product.url}" target="_blank" rel="noopener noreferrer" class="amazon-buy-btn">
                         <i class="fa-brands fa-amazon"></i> Buy on Amazon
                     </a>
                 </div>
@@ -1158,7 +1257,7 @@ async function loadAmazonProducts(query) {
 
         grid.innerHTML = html;
     } catch (err) {
-        grid.innerHTML = '<p style="color: var(--amazon-red); text-align:center; padding: 40px; grid-column: span 2;">Failed to load products</p>';
+        grid.innerHTML = `<p style="color: var(--amazon-red); text-align:center; padding: 40px; grid-column: span 2;">Failed to load products. <a href="https://www.amazon.com" target="_blank" style="color:var(--amazon-orange);">Visit Amazon →</a></p>`;
         console.error('Amazon search error:', err);
     }
 }
@@ -1489,4 +1588,364 @@ window.showSimulatedDeviceNotification = function(type, message) {
         notif.classList.remove('visible');
         setTimeout(() => notif.remove(), 300);
     }, 6000);
+};
+
+// ══════════════════════════════════════════════════════════════════════
+//  TRACKING & COMPLAINTS
+// ══════════════════════════════════════════════════════════════════════
+
+// Close buttons for new modals
+document.getElementById('tracking-close')?.addEventListener('click', () => {
+    document.getElementById('tracking-modal').classList.add('hidden');
+});
+document.getElementById('complaints-close')?.addEventListener('click', () => {
+    document.getElementById('complaints-modal').classList.add('hidden');
+});
+document.getElementById('admin-close')?.addEventListener('click', () => {
+    document.getElementById('admin-modal').classList.add('hidden');
+});
+document.getElementById('tasks-close')?.addEventListener('click', () => {
+    document.getElementById('tasks-modal').classList.add('hidden');
+});
+
+// Load Tasks for Modal
+window.loadTasksModal = async function() {
+    const list = document.getElementById('tasks-list-modal');
+    list.innerHTML = '<p style="text-align:center; padding: 20px;">Loading tasks...</p>';
+    try {
+        const res = await fetch(`${API_BASE}/tasks/${userId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        
+        if (!data.tasks || data.tasks.length === 0) {
+            list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No pending tasks.</p>';
+            return;
+        }
+
+        let html = '';
+        data.tasks.forEach(t => {
+            let color = t.priority === 'high' ? 'var(--amazon-red)' : (t.priority === 'low' ? 'var(--text-muted)' : 'var(--amazon-orange)');
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-left: 4px solid ${color}; border-radius: 8px; padding: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items: center;">
+                    <div>
+                        <strong style="font-size:14px;">${t.title}</strong>
+                        <div style="font-size:11px; color:var(--text-secondary); margin-top:2px; text-transform:uppercase;">${t.priority} priority</div>
+                    </div>
+                    <button onclick="sendMessage('Complete task: ${t.title}')" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="fa-regular fa-circle-check" style="font-size:18px;"></i></button>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p style="color:var(--amazon-red); text-align: center;">Failed to load tasks.</p>';
+    }
+}
+
+// Add new Task
+window.addTask = async function() {
+    const title = document.getElementById('new-task-input').value.trim();
+    const priority = document.getElementById('new-task-priority').value;
+    if (!title) {
+        alert('Please enter a task.');
+        return;
+    }
+    
+    try {
+        await fetch(`${API_BASE}/tasks/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ title: title, priority: priority, category: 'general' })
+        });
+        document.getElementById('new-task-input').value = '';
+        showAlexaToast('Added task: ' + title);
+        loadTasksModal();
+    } catch(err) {
+        console.error(err);
+    }
+};
+
+// Load Orders for Tracking
+window.loadOrders = async function() {
+    const list = document.getElementById('tracking-list');
+    list.innerHTML = '<p style="text-align:center; padding: 20px;">Loading orders...</p>';
+    try {
+        const res = await fetch(`${API_BASE}/orders/${userId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        
+        if (!data.orders || data.orders.length === 0) {
+            list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No active orders found.</p>';
+            document.getElementById('tracking-map-container').style.display = 'none';
+            return;
+        }
+
+        // Show Map with Real-Time User Location
+        const mapContainer = document.getElementById('tracking-map-container');
+        
+        let userLat = 40.7128; // Default NY
+        let userLon = -74.0060;
+        
+        const getGPSLocation = () => new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation not supported'));
+            } else {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => resolve({lat: position.coords.latitude, lon: position.coords.longitude}),
+                    (err) => reject(err),
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            }
+        });
+
+        try {
+            // Attempt high-accuracy GPS first
+            const gps = await getGPSLocation();
+            userLat = gps.lat;
+            userLon = gps.lon;
+        } catch(gpsErr) {
+            console.warn('GPS failed, falling back to IP location.', gpsErr);
+            try {
+                // Fallback to IP-API if GPS is denied or fails
+                const locRes = await fetch('http://ip-api.com/json/');
+                const locData = await locRes.json();
+                if (locData && locData.lat && locData.lon) {
+                    userLat = locData.lat;
+                    userLon = locData.lon;
+                }
+            } catch(ipErr) {
+                console.error('Failed to get IP location.', ipErr);
+            }
+        }
+
+        mapContainer.style.display = 'block';
+        document.getElementById('tracking-map-link-container').style.display = 'block';
+
+        if (window.trackingMap) {
+            window.trackingMap.remove();
+        }
+        
+        // Initialize Leaflet map
+        const map = L.map('tracking-map-container').setView([userLat, userLon], 13);
+        window.trackingMap = map;
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Destination Marker (Home)
+        const homeIcon = L.divIcon({
+            html: '<i class="fa-solid fa-house" style="color: #ff9900; font-size: 24px; text-shadow: 1px 1px 2px black;"></i>',
+            className: '', iconSize: [24, 24], iconAnchor: [12, 24]
+        });
+        L.marker([userLat, userLon], {icon: homeIcon}).addTo(map).bindPopup("Delivery Location").openPopup();
+
+        // Find real nearest store via Overpass API for realistic Google Maps routing
+        let storeLat = userLat + 0.015;
+        let storeLon = userLon + 0.015;
+        let storeName = "Amazon Fresh Hub";
+        
+        try {
+            const query = `[out:json];node["shop"~"supermarket|convenience"](around:10000,${userLat},${userLon});out 1;`;
+            const storeRes = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+            const storeData = await storeRes.json();
+            if (storeData && storeData.elements && storeData.elements.length > 0) {
+                storeLat = storeData.elements[0].lat;
+                storeLon = storeData.elements[0].lon;
+                storeName = storeData.elements[0].tags.name || "Local Fresh Partner Store";
+            }
+        } catch (e) {
+            console.error('Failed to find real store.', e);
+        }
+
+        const storeIcon = L.divIcon({
+            html: '<i class="fa-solid fa-store" style="color: #067D68; font-size: 24px; text-shadow: 1px 1px 2px black;"></i>',
+            className: '', iconSize: [24, 24], iconAnchor: [12, 24]
+        });
+        L.marker([storeLat, storeLon], {icon: storeIcon}).addTo(map).bindPopup(storeName);
+
+        // Set Google Maps Link to use real store coordinates
+        document.getElementById('tracking-open-map-link').href = `https://www.google.com/maps/dir/${storeLat},${storeLon}/${userLat},${userLon}/`;
+
+        // Route Polyline (Simulated straight lines for Leaflet)
+        const latlngs = [
+            [storeLat, storeLon],
+            [(storeLat + userLat) / 2 + 0.005, (storeLon + userLon) / 2 - 0.005],
+            [userLat, userLon]
+        ];
+        L.polyline(latlngs, {color: '#067D68', weight: 4, dashArray: '5, 10'}).addTo(map);
+
+        // Delivery Agent Marker (moving on route)
+        const agentLat = (storeLat + userLat) / 2 + 0.005;
+        const agentLon = (storeLon + userLon) / 2 - 0.005;
+        const agentIcon = L.divIcon({
+            html: '<i class="fa-solid fa-motorcycle" style="color: #ff9900; font-size: 28px; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);"></i>',
+            className: '', iconSize: [28, 28], iconAnchor: [14, 28]
+        });
+        L.marker([agentLat, agentLon], {icon: agentIcon}).addTo(map).bindPopup("Your Delivery Agent");
+
+        map.fitBounds([[userLat, userLon], [storeLat, storeLon]], {padding: [30, 30]});
+        setTimeout(() => map.invalidateSize(), 300);
+
+        let html = '';
+        data.orders.forEach(order => {
+            let statusIcon = order.status === 'processing' ? '<i class="fa-solid fa-box" style="color:var(--amazon-orange);"></i> Processing' : '<i class="fa-solid fa-truck" style="color:var(--success-color);"></i> Shipped';
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                        <strong>${order.product_name}</strong>
+                        <span style="font-size:12px; font-weight:bold;">${statusIcon}</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-secondary); margin-bottom: 4px;">Tracking ID: ${order.tracking_id}</div>
+                    <div style="font-size:12px; color:var(--text-secondary); margin-bottom: 8px;">Estimated Delivery: ${order.estimated_delivery}</div>
+                    <div style="font-size:12px; font-weight:bold;">Qty: ${order.quantity} | Total: $${order.total_price.toFixed(2)}</div>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p style="color:var(--amazon-red); text-align: center;">Failed to load orders.</p>';
+    }
+}
+
+// Load Complaints for user
+window.loadComplaints = async function() {
+    const list = document.getElementById('complaints-list');
+    list.innerHTML = '<p style="font-size:13px; color:var(--text-muted);">Loading complaints...</p>';
+    try {
+        const res = await fetch(`${API_BASE}/complaints/${userId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        
+        if (!data.complaints || data.complaints.length === 0) {
+            list.innerHTML = '<p style="font-size:13px; color:var(--text-muted);">No complaints history.</p>';
+            return;
+        }
+
+        let html = '';
+        data.complaints.forEach(c => {
+            let statusColor = c.status === 'resolved' ? 'var(--success-color)' : 'var(--amazon-orange)';
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                        <strong style="font-size:13px;">${c.product_name || 'General Issue'}</strong>
+                        <span style="font-size:11px; padding: 2px 6px; border-radius: 4px; background: ${statusColor}22; color: ${statusColor}; font-weight: bold; text-transform:uppercase;">${c.status}</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-primary); margin-bottom: 4px;">"${c.description}"</div>
+                    ${c.resolution ? `<div style="font-size:12px; margin-top: 8px; padding: 8px; background: rgba(5,148,104,0.1); border-left: 2px solid var(--success-color); border-radius: 4px;"><strong>Admin Reply:</strong> ${c.resolution}</div>` : ''}
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p style="color:var(--amazon-red);">Failed to load complaints.</p>';
+    }
+}
+
+// Submit a new complaint
+window.submitComplaint = async function() {
+    const product = document.getElementById('complaint-product').value.trim();
+    const desc = document.getElementById('complaint-desc').value.trim();
+    if (!desc) {
+        alert('Please describe your issue.');
+        return;
+    }
+    
+    try {
+        await fetch(`${API_BASE}/complaints/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ product_name: product, description: desc })
+        });
+        document.getElementById('complaint-product').value = '';
+        document.getElementById('complaint-desc').value = '';
+        showAlexaToast('Your complaint has been lodged.');
+        loadComplaints();
+    } catch (err) {
+        console.error(err);
+        alert('Failed to submit complaint.');
+    }
+};
+
+// Admin: Load all complaints
+window.loadAdminComplaints = async function() {
+    const list = document.getElementById('admin-complaints-list');
+    list.innerHTML = '<p style="font-size:13px; color:var(--text-muted);">Loading all complaints...</p>';
+    try {
+        const res = await fetch(`${API_BASE}/admin/complaints`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        
+        if (!data.complaints || data.complaints.length === 0) {
+            list.innerHTML = '<p style="font-size:13px; color:var(--text-muted);">No open complaints across the platform.</p>';
+            return;
+        }
+
+        let html = '';
+        data.complaints.forEach(c => {
+            if (c.status === 'resolved') return; // Only show open
+            
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: 8px; padding: 15px; margin-bottom: 12px; border-left: 4px solid var(--amazon-red);">
+                    <div style="font-size:12px; color:var(--text-secondary); margin-bottom: 4px;">Complaint ID: ${c.id} | User: ${c.user_id}</div>
+                    <div style="font-size:14px; font-weight:bold; margin-bottom: 6px;">Product/Order: ${c.product_name || 'N/A'}</div>
+                    <div style="font-size:13px; background:var(--bg-input); padding: 10px; border-radius: 4px; margin-bottom: 10px;">"${c.description}"</div>
+                    
+                    <div style="display:flex; gap: 8px;">
+                        <input type="text" id="admin-res-${c.id}" placeholder="Type resolution (e.g. Refund initiated)..." style="flex:1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-medium); background:var(--bg-input); color:var(--text-primary); font-size:12px;">
+                        <button onclick="resolveComplaint('${c.id}')" style="padding: 8px 12px; background: var(--success-color); color: white; border: none; border-radius: 4px; font-weight:bold; cursor: pointer; font-size:12px;">Resolve</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (!html) html = '<p style="font-size:13px; color:var(--text-muted);">All complaints are resolved!</p>';
+        list.innerHTML = html;
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p style="color:var(--amazon-red);">Failed to load admin complaints.</p>';
+    }
+}
+
+// Admin: Resolve complaint
+window.resolveComplaint = async function(id) {
+    const resText = document.getElementById(`admin-res-${id}`).value.trim() || 'Resolved by Admin team.';
+    try {
+        await fetch(`${API_BASE}/admin/complaints/${id}/resolve`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ resolution: resText })
+        });
+        showAlexaToast('Complaint resolved.');
+        loadAdminComplaints();
+    } catch (err) {
+        console.error(err);
+        alert('Failed to resolve complaint.');
+    }
+};
+
+// Shopping: Add Searched Item to Cart
+window.addSearchedToCart = async function() {
+    const query = document.getElementById('amazon-search-input').value.trim();
+    if (!query) {
+        alert('Please search for a product first, or type the name of the product you want to add.');
+        return;
+    }
+    
+    // Add to DB
+    try {
+        await fetch(`${API_BASE}/shopping/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({
+                product_name: query,
+                category: 'general',
+                quantity: 1,
+                estimated_price: Math.floor(Math.random() * 50) + 5 // Simulating random price for searched item
+            })
+        });
+        showAlexaToast('Added ' + query + ' to your list.');
+        document.getElementById('amazon-search-input').value = '';
+        loadShoppingList();
+    } catch(err) {
+        console.error(err);
+    }
 };

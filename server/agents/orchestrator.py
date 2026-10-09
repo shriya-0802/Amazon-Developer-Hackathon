@@ -61,26 +61,40 @@ class AgentOrchestrator:
         agent_responses = []
 
         msg_lower = message.strip().lower()
-        if msg_lower == "do: block_fitness":
-            import asyncio
-            asyncio.create_task(self._simulate_notifications(session_id))
-            return {
-                "text": "Fitness time blocked successfully! I'll notify you via Email, SMS, and Voice Message before it starts.",
-                "type": "confirmation",
-                "cards": [],
-                "session_id": session_id,
-                "timestamp": datetime.now().isoformat(),
-                "trigger_notification": True
-            }
-            
-        if msg_lower == "do: show_plan":
-            return {
-                "text": "Here is your plan for the week:\n- **Mon:** 30m run\n- **Wed:** 45m strength\n- **Fri:** 30m cycling\nI'll add these to your calendar.",
-                "type": "confirmation",
-                "cards": [],
-                "session_id": session_id,
-                "timestamp": datetime.now().isoformat()
-            }
+
+        # Handle Quick Action Buttons
+        if msg_lower.startswith("do: "):
+            cmd = msg_lower.replace("do: ", "").strip()
+            if cmd == "morning_briefing":
+                intent = "morning_briefing"
+            elif cmd == "show_schedule":
+                intent = "schedule"
+            elif cmd == "show_tasks":
+                intent = "task"
+            elif cmd == "fitness_status":
+                intent = "fitness"
+            elif cmd == "order_all":
+                intent = "shop"
+                message = "checkout"  # force checkout behavior
+            elif cmd == "block_fitness":
+                import asyncio
+                asyncio.create_task(self._simulate_notifications(session_id))
+                return {
+                    "text": "Fitness time blocked successfully! I'll notify you via Email, SMS, and Voice Message before it starts.",
+                    "type": "confirmation",
+                    "cards": [],
+                    "session_id": session_id,
+                    "timestamp": datetime.now().isoformat(),
+                    "trigger_notification": True
+                }
+            elif cmd == "show_plan":
+                return {
+                    "text": "Here is your plan for the week:\n- **Mon:** 30m run\n- **Wed:** 45m strength\n- **Fri:** 30m cycling\nI'll add these to your calendar.",
+                    "type": "confirmation",
+                    "cards": [],
+                    "session_id": session_id,
+                    "timestamp": datetime.now().isoformat()
+                }
 
         if intent in ("morning_briefing", "briefing", "good_morning") or "summary" in msg_lower or "analytics" in msg_lower:
             return await self.generate_briefing(session_id)
@@ -130,6 +144,22 @@ class AgentOrchestrator:
                     "type": "confirmation",
                     "cards": [],
                 })
+        elif intent == "support":
+            # Customer Support Agent Logic
+            import database as db
+            import uuid
+            now = datetime.now().isoformat()
+            complaint_id = str(uuid.uuid4())
+            db.get_db().execute(
+                "INSERT INTO complaints (id, user_id, product_name, description, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (complaint_id, session_id, "Chat Support Escalation", message, "pending", now)
+            ).connection.commit()
+            
+            agent_responses.append({
+                "text": "I am so sorry you are experiencing an issue. As your Customer Support AI, I have immediately lodged a formal complaint on your behalf with the details you provided. This has been escalated securely to our Admin Dashboard where our Human and AI support teams will review and resolve it shortly.",
+                "type": "support",
+                "cards": []
+            })
         else:
             # General conversation — use cross-agent intelligence
             result = await self._handle_general(message, entities, session_id)
@@ -434,12 +464,13 @@ class AgentOrchestrator:
             "fitness": [r"\bfitness\b", r"\bexercise\b", r"\bworkout\b", r"\bsteps\b", r"\brun\b", r"\bmarathon\b", r"\btraining\b", r"\bgym\b", r"\bwalk\b", r"\bhealth\b"],
             "weather": [r"\bweather\b", r"\brain\b", r"\btemperature\b", r"\bforecast\b"],
             "remember": [r"\bremember\b", r"\bnote that\b", r"\bkeep in mind\b", r"\bdon't forget\b"],
+            "support": [r"\bcomplaint\b", r"\bsupport\b", r"\bhelp me with\b", r"\bbad service\b", r"\bbroken\b", r"\bissue\b", r"\bproblem\b", r"\bcustomer service\b", r"\breplace\b", r"\brefund\b", r"\bdamaged\b", r"\bmissing\b", r"\bdelayed\b"],
         }
 
-        for intent, patterns in intent_keywords.items():
+        for intent_name, patterns in intent_keywords.items():
             for pattern in patterns:
                 if re.search(pattern, msg):
-                    return intent
+                    return intent_name
 
         return "general"
 
@@ -537,8 +568,23 @@ class AgentOrchestrator:
                 "cards": [],
             }
 
+        # Fallback if no LLM APIs are configured or if they fail
+        msg_lower = message.lower()
+        if "what is this" in msg_lower or "platform" in msg_lower or "who are you" in msg_lower:
+            return {
+                "text": "I am LifeSync, your AI personal operations center! I help you manage your daily schedule, track tasks, monitor fitness goals, and handle Amazon smart shopping—all from one unified dashboard.",
+                "type": "general",
+                "cards": []
+            }
+        elif "how" in msg_lower and ("work" in msg_lower or "use" in msg_lower):
+            return {
+                "text": "You can type commands like 'add milk to shopping list', 'log 5000 steps', 'what is my schedule today', or use the Quick Action buttons in the sidebar to interact with me.",
+                "type": "general",
+                "cards": []
+            }
+
         return {
-            "text": "I'm here to help! I can manage your schedule, track tasks, suggest smart shopping, monitor fitness goals, or give you a morning briefing. What would you like to do?",
+            "text": f"You asked: *\"{message}\"*\n\nI'm currently running in local-only mode (no LLM API key detected), so I can't generate a custom conversational response right now. But I can still manage your schedule, track tasks, suggest smart shopping, and monitor fitness goals. What would you like to do?",
             "type": "general",
             "cards": [
                 {

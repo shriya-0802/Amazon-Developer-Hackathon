@@ -135,6 +135,42 @@ def init_db():
         )
     """)
 
+    # Complaints system
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS complaints (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            order_id TEXT,
+            category TEXT DEFAULT 'general',
+            description TEXT NOT NULL,
+            status TEXT DEFAULT 'open',
+            resolution TEXT,
+            resolved_by TEXT,
+            created_at TEXT NOT NULL,
+            resolved_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+
+    # Order tracking
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            amazon_url TEXT,
+            quantity INTEGER DEFAULT 1,
+            total_price REAL,
+            status TEXT DEFAULT 'processing',
+            estimated_delivery TEXT,
+            tracking_id TEXT,
+            ordered_at TEXT NOT NULL,
+            delivered_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("📦 Database initialized: lifesync.db")
@@ -475,19 +511,99 @@ def verify_token(token: str) -> dict:
 # ── Seed Data ────────────────────────────────────────────────────────
 
 def _seed_user_data(cursor, user_id: str, now: str):
-    """Seed demo data for a new user."""
-    from uuid import uuid4
-    # Seed Demo Tasks
-    tasks = [
-        ("Update fitness profile & check BMR", "high", "health"),
-        ("Buy groceries for North Indian meal prep", "medium", "personal"),
-        ("Schedule team sync for Amazon Hackathon", "high", "work")
-    ]
-    for title, priority, category in tasks:
-        cursor.execute("""
-            INSERT INTO tasks (id, user_id, title, description, priority, category, status, due_date, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (str(uuid4()), user_id, title, "", priority, category, "pending", now, now))
+    """No pre-seeded data. All data comes from real user input."""
+    pass
+
+
+# ── Complaints ───────────────────────────────────────────────────────
+
+def add_complaint(user_id: str, complaint: dict) -> dict:
+    """Lodge a new complaint."""
+    conn = get_db()
+    complaint_id = str(uuid.uuid4())
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
+    conn.execute("""
+        INSERT INTO complaints (id, user_id, product_name, order_id, category, description, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        complaint_id, user_id,
+        complaint.get("product_name", ""),
+        complaint.get("order_id", ""),
+        complaint.get("category", "general"),
+        complaint.get("description", ""),
+        "open",
+        now,
+    ))
+    conn.commit()
+    conn.close()
+    return {"id": complaint_id, "status": "filed"}
+
+
+def get_complaints(user_id: str = None) -> list:
+    """Get complaints — all if admin, or for specific user."""
+    conn = get_db()
+    if user_id:
+        rows = conn.execute("SELECT * FROM complaints WHERE user_id = ? ORDER BY created_at DESC", (user_id,)).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM complaints ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def resolve_complaint(complaint_id: str, resolution: str, resolved_by: str = "admin") -> dict:
+    """Resolve a complaint."""
+    conn = get_db()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
+    conn.execute("UPDATE complaints SET status = 'resolved', resolution = ?, resolved_by = ?, resolved_at = ? WHERE id = ?",
+                 (resolution, resolved_by, now, complaint_id))
+    conn.commit()
+    conn.close()
+    return {"status": "resolved"}
+
+
+# ── Orders ───────────────────────────────────────────────────────────
+
+def add_order(user_id: str, order: dict) -> dict:
+    """Create a new order."""
+    conn = get_db()
+    order_id = str(uuid.uuid4())[:8].upper()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30)).isoformat()
+    est_delivery = (datetime.utcnow() + timedelta(hours=5, minutes=30) + timedelta(days=3)).strftime("%Y-%m-%d")
+    tracking_id = 'AMZ-' + str(uuid.uuid4())[:8].upper()
+    conn.execute("""
+        INSERT INTO orders (id, user_id, product_name, amazon_url, quantity, total_price, status, estimated_delivery, tracking_id, ordered_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        order_id, user_id,
+        order.get("product_name", ""),
+        order.get("amazon_url", ""),
+        order.get("quantity", 1),
+        order.get("total_price", 0),
+        "processing",
+        est_delivery,
+        tracking_id,
+        now,
+    ))
+    conn.commit()
+    conn.close()
+    return {"id": order_id, "tracking_id": tracking_id, "estimated_delivery": est_delivery, "status": "processing"}
+
+
+def get_orders(user_id: str) -> list:
+    """Get all orders for a user."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM orders WHERE user_id = ? ORDER BY ordered_at DESC", (user_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_shopping_item(item_id: str) -> dict:
+    """Delete a shopping item."""
+    conn = get_db()
+    conn.execute("DELETE FROM shopping_items WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "deleted"}
 
 
 # Initialize on import

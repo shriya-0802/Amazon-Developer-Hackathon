@@ -103,12 +103,11 @@ class FitnessAgent:
                 result["steps_trend"] = sensor_info + f"You haven't tracked any steps today. Ready to start moving? Your weekly average is {weekly_avg:,}."
             else:
                 result["steps_trend"] = sensor_info + f"You've taken {today_steps:,} steps today ({step_pct}% of goal). {remaining:,} more to go! You've burned an estimated {total_calories} kcal today."
-            result["suggestion"] = "I've blocked a 30-min walk at 2:00 PM based on your calendar gaps."
         else:
             result["steps_trend"] = sensor_info + f"🎉 You've hit your step goal! {today_steps:,} steps today. You've burned an estimated {total_calories} kcal today."
 
         if active_goal:
-            result["progress"] = "Week 2 of 12 — on track"
+            result["progress"] = "Active goal in progress."
 
         return result
 

@@ -17,41 +17,11 @@ class KnowledgeGraph:
         self._preferences: dict[str, dict[str, Any]] = {}
         # Interaction history
         self._interactions: dict[str, list[dict]] = {}
-        # Learned patterns
+        # Learned patterns (built from REAL user data only)
         self._patterns: dict[str, dict[str, Any]] = {}
         # Entity relationships
         self._entities: dict[str, list[dict]] = {}
-
-        # Pre-populate with demo data
-        self._init_demo_data()
-
-    def _init_demo_data(self):
-        """Initialize with demo data for the hackathon."""
-        demo_id = "default"
-        self._preferences[demo_id] = {
-            "name": "Shriya",
-            "wake_time": "6:30 AM",
-            "work_start": "9:00 AM",
-            "preferred_coffee": "oat milk latte",
-            "fitness_level": "intermediate",
-            "commute_mode": "car",
-            "diet_preference": "high protein, low carb",
-        }
-        self._patterns[demo_id] = {
-            "shopping_reorder": {
-                "item": "Tide Pods",
-                "interval": "5 weeks",
-                "last_ordered": "Aug 25",
-            },
-            "morning_routine": {
-                "coffee_time": "7:00 AM",
-                "workout_days": ["Monday", "Wednesday", "Friday"],
-            },
-            "productivity_peak": {
-                "best_hours": "8:00 AM - 11:00 AM",
-                "type": "deep_work",
-            },
-        }
+        # No pre-populated demo data — everything is from real user input
 
     def store_preference(self, session_id: str, key: str, value: Any, importance: str = "medium"):
         """Store a user preference."""

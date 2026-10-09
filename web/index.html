@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Amazon+Ember:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -87,6 +89,14 @@
                         <i class="fa-brands fa-amazon"></i>
                         <span>Amazon Shop</span>
                     </a>
+                    <a href="#" class="sidebar-item" data-tab="tracking" id="nav-tracking">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <span>Tracking</span>
+                    </a>
+                    <a href="#" class="sidebar-item" data-tab="complaints" id="nav-complaints">
+                        <i class="fa-solid fa-headset"></i>
+                        <span>Complaints</span>
+                    </a>
 
                     <div class="nav-section-label" style="margin-top: 24px;">FEATURES</div>
                     <a href="#" class="sidebar-item" data-tab="mood" id="nav-mood">
@@ -116,10 +126,6 @@
                             <span class="aws-label">Powered by</span>
                             <span class="aws-service">AWS Bedrock</span>
                         </div>
-                    </div>
-                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-reset-db" style="background: transparent; border: 1px solid #3A4553; color: #8795A1; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"><i class="fa-solid fa-rotate-right" style="margin-right:5px;"></i>Reset Data</button>
-                        <button id="btn-delete-account" style="background: transparent; border: 1px solid #6c2222; color: #c65353; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"><i class="fa-solid fa-trash" style="margin-right:5px;"></i>Delete Account</button>
                     </div>
                 </div>
             </aside>
@@ -230,9 +236,31 @@
                         </button>
                     </div>
                     <div class="context-body" id="context-widgets">
-                        <div class="ctx-widget skeleton-widget"></div>
-                        <div class="ctx-widget skeleton-widget"></div>
-                        <div class="ctx-widget skeleton-widget"></div>
+                        <!-- Smart Home Control Panel -->
+                        <div class="ctx-widget" style="padding: 15px; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-medium);">
+                            <h4 style="margin-bottom: 12px; color: var(--text-primary); font-size: 14px;"><i class="fa-solid fa-house-signal" style="color: #6366f1;"></i> Alexa Smart Home</h4>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+                                <div style="font-size: 13px; color: var(--text-secondary);"><i class="fa-regular fa-lightbulb" style="color: var(--amazon-orange); width: 20px;"></i> Living Room</div>
+                                <label class="toggle-switch" style="transform: scale(0.85);"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+                                <div style="font-size: 13px; color: var(--text-secondary);"><i class="fa-solid fa-temperature-half" style="color: var(--amazon-red); width: 20px;"></i> Thermostat</div>
+                                <div style="font-weight: bold; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                    72°F 
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <i class="fa-solid fa-chevron-up" style="color:var(--text-muted); font-size:10px; cursor:pointer;"></i>
+                                        <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); font-size:10px; cursor:pointer;"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size: 13px; color: var(--text-secondary);"><i class="fa-solid fa-lock" style="color: var(--amazon-green); width: 20px;"></i> Front Door</div>
+                                <label class="toggle-switch" style="transform: scale(0.85);"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
                     </div>
                 </aside>
             </main>
@@ -466,30 +494,40 @@
 
     <!-- Amazon Shopping Modal -->
     <div class="modal-overlay hidden" id="shopping-modal">
-        <div class="modal-card" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+        <div class="modal-card" style="max-width: 800px; max-height: 88vh; overflow-y: auto;">
             <div class="modal-header">
                 <h3><i class="fa-brands fa-amazon" style="color: var(--amazon-orange);"></i> Amazon Smart Shopping</h3>
-                <button class="modal-close" id="shopping-close"><i class="fa-solid fa-xmark"></i></button>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <a href="https://www.amazon.com" target="_blank" rel="noopener" style="font-size:12px;color:var(--amazon-orange);text-decoration:none;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Amazon</a>
+                    <button class="modal-close" id="shopping-close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
             </div>
             <div class="modal-body" style="padding: 16px 24px 24px;">
                 <!-- Search -->
-                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 14px;">
                     <input type="text" id="amazon-search-input" placeholder="Search Amazon products..." style="flex:1; padding: 10px 14px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); font-family: inherit; font-size: 14px;">
                     <button id="amazon-search-btn" style="padding: 10px 20px; background: var(--amazon-orange); color: black; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
                         <i class="fa-solid fa-search"></i> Search
+                    </button>
+                    <button onclick="addSearchedToCart()" id="amazon-add-btn" style="padding: 10px 20px; background: var(--bg-card); color: var(--text-primary); font-weight: 600; border: 1px solid var(--border-medium); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                        <i class="fa-solid fa-cart-plus"></i> Add to List
                     </button>
                 </div>
 
                 <!-- Quick Categories -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
-                    <button class="amazon-cat-btn" data-cat="household" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🏠 Household</button>
-                    <button class="amazon-cat-btn" data-cat="grocery" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🛒 Grocery</button>
-                    <button class="amazon-cat-btn" data-cat="electronics" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">📱 Electronics</button>
-                    <button class="amazon-cat-btn" data-cat="" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🔥 All Deals</button>
+                    <button class="amazon-cat-btn" data-cat="" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--amazon-orange); background: rgba(255,153,0,0.1); color: var(--amazon-orange); cursor: pointer; font-size: 12px; font-weight:600; transition: all 0.2s;">🔥 All Deals</button>
+                    <button class="amazon-cat-btn" data-cat="Grocery" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🛒 Grocery</button>
+                    <button class="amazon-cat-btn" data-cat="Electronics" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">📱 Electronics</button>
+                    <button class="amazon-cat-btn" data-cat="Household" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">🏠 Household</button>
+                    <button class="amazon-cat-btn" data-cat="Health" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">💊 Health</button>
+                    <button class="amazon-cat-btn" data-cat="Books" style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-medium); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s;">📚 Books</button>
                 </div>
 
-                <!-- Product Grid -->
-                <div id="amazon-product-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;">
+                <!-- Product Grid — 4 columns -->
+                <div id="amazon-product-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div class="ctx-widget skeleton-widget" style="height: 200px;"></div>
+                    <div class="ctx-widget skeleton-widget" style="height: 200px;"></div>
                     <div class="ctx-widget skeleton-widget" style="height: 200px;"></div>
                     <div class="ctx-widget skeleton-widget" style="height: 200px;"></div>
                 </div>
@@ -504,6 +542,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Mood Tracker Modal -->
     <div class="modal-overlay hidden" id="mood-modal">
@@ -580,6 +619,30 @@
         <button class="alexa-toast-dismiss" id="alexa-toast-dismiss"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
+    <!-- Tasks Modal -->
+    <div class="modal-overlay hidden" id="tasks-modal">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-list-check" style="color: #067D68;"></i> My Tasks</h3>
+                <button class="modal-close" id="tasks-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="new-task-input" placeholder="What needs to be done?" style="flex:1; padding: 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary);">
+                    <select id="new-task-priority" style="padding: 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary);">
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="low">Low</option>
+                    </select>
+                    <button onclick="addTask()" class="primary-btn" style="background: #067D68;">Add Task</button>
+                </div>
+                <div id="tasks-list-modal" style="max-height: 50vh; overflow-y: auto;">
+                    <p style="color: var(--text-muted); text-align: center;">No pending tasks.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Message Template -->
     <template id="message-template">
         <div class="message fade-in">
@@ -591,6 +654,50 @@
             </div>
         </div>
     </template>
+
+    <!-- Tracking Modal -->
+    <div class="modal-overlay hidden" id="tracking-modal">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-truck-fast" style="color: var(--amazon-orange);"></i> Amazon Order Tracking</h3>
+                <button class="modal-close" id="tracking-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div id="tracking-map-container" style="width: 100%; height: 250px; border-radius: 8px; margin-bottom: 8px; overflow: hidden; border: 1px solid var(--border-medium); display: none;"></div>
+                <div id="tracking-map-link-container" style="text-align: right; margin-bottom: 20px; display: none;">
+                     <a id="tracking-open-map-link" href="#" target="_blank" style="color: var(--amazon-orange); font-size: 13px; text-decoration: none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in Google Maps</a>
+                </div>
+                <div id="tracking-list" style="max-height: 40vh; overflow-y: auto;">
+                    <p style="color: var(--text-muted); text-align: center;">No active orders found.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complaints Modal -->
+    <div class="modal-overlay hidden" id="complaints-modal">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-headset" style="color: var(--amazon-orange);"></i> Customer Support</h3>
+                <button class="modal-close" id="complaints-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div style="background: var(--bg-card); padding: 15px; border-radius: 8px; border: 1px solid var(--border-medium); margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px; font-size: 14px;">Lodge a Complaint</h4>
+                    <input type="text" id="complaint-product" placeholder="Product Name / Order ID" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary);">
+                    <textarea id="complaint-desc" placeholder="Describe your issue..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border-medium); color: var(--text-primary); min-height: 80px; margin-bottom: 10px; font-family: inherit; resize: vertical;"></textarea>
+                    <button onclick="submitComplaint()" class="primary-btn" style="width: 100%;">Submit Complaint</button>
+                </div>
+                
+                <h4 style="margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid var(--border-medium); padding-bottom: 5px;">Your Previous Complaints</h4>
+                <div id="complaints-list" style="max-height: 40vh; overflow-y: auto;">
+                    <p style="color: var(--text-muted); font-size: 13px;">No complaints history.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End of Modals -->
 
     <script type="module" src="/js/app.js"></script>
 </body>

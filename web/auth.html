@@ -457,8 +457,14 @@
         // Check if already logged in
         (function() {
             const token = localStorage.getItem('lifesync_token');
-            if (token) {
-                window.location.href = '/';
+            const userStr = localStorage.getItem('lifesync_user');
+            if (token && userStr) {
+                const u = JSON.parse(userStr);
+                if (u.role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/';
+                }
             }
         })();
 
@@ -509,7 +515,11 @@
                 const data = await res.json();
                 localStorage.setItem('lifesync_token', data.token);
                 localStorage.setItem('lifesync_user', JSON.stringify(data));
-                window.location.href = '/';
+                if (data.role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/';
+                }
             } catch (err) {
                 errorEl.textContent = err.message;
                 errorEl.classList.add('visible');
@@ -557,10 +567,16 @@
                 localStorage.setItem('lifesync_user', JSON.stringify(data));
                 localStorage.setItem('lifesync_is_new_user', 'true');
 
-                successEl.textContent = `✅ Account created! Welcome, ${data.name}. Redirecting...`;
+                successEl.textContent = `✅ Account created! Welcome, ${data.name}. Setting up your dashboard...`;
                 successEl.classList.add('visible');
 
-                setTimeout(() => { window.location.href = '/'; }, 1500);
+                setTimeout(() => { 
+                    if (data.role === 'admin') {
+                        window.location.href = '/admin.html';
+                    } else {
+                        window.location.href = '/onboarding.html';
+                    }
+                }, 1500);
             } catch (err) {
                 errorEl.textContent = err.message;
                 errorEl.classList.add('visible');
