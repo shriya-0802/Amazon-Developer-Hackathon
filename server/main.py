@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from mcp_handler import MCPHandler
@@ -584,6 +585,13 @@ async def amazon_product_search(q: str = "", category: str = ""):
 
     return JSONResponse(content={"products": products[:8], "query": q, "total": len(products)})
 
+
+# ─── Static Frontend Serving (For Render Deployment) ───────────────────────
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_dir = os.path.join(BASE_DIR, "web")
+if os.path.exists(web_dir):
+    app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
 # ─── Main ───────────────────────────────────────────────────────────────────
 
